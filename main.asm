@@ -203,7 +203,6 @@ main:
 
 ;do nothing... wait for vblank
 MainLoop:
-    ;call vblank
 
     jp MainLoop
 
@@ -228,35 +227,30 @@ ReadButtons:
         cp  %00000000
         jr nz,+
         call OnButton1
-
     +:  
         in a,($dc)
         and %00100000
         cp  %00000000
         jr nz,+
         call OnButton2
-    
     +:  
         in a,($dc)
         and %00000001
         cp  %00000000
         jr nz,+
         call OnButtonUp
-    
     +:  
         in a,($dc)
         and %00000010
         cp  %00000000
         jr nz,+
         call OnButtonDown
-    
     +:  
         in a,($dc)
         and %00000100
         cp  %00000000
         jr nz,+
         call OnButtonLeft
-
     +:  
         in a,($dc)
         and %00001000
@@ -268,51 +262,89 @@ ReadButtons:
 ret
  
 OnButton1:
-    push af
-        ;ld bc,$FFEF ;//remove 16pix/256frame to y speed
-        ;ld hl,(speedY)
-        ;add hl,bc
-        ;ld (speedY),hl
-    pop af
 ret
 OnButton2:
-    push af
-        ;ld bc,$FFEF ;//remove 16pix/256frame to y speed
-        ;ld hl,(speedY)
-        ;add hl,bc
-        ;ld (speedY),hl
-    pop af
 ret
 OnButtonUp:
-    push af
-        ;ld bc,$FFEF ;//remove 16pix/256frame to y speed
-        ;ld hl,(speedY)
-        ;add hl,bc
-        ;ld (speedY),hl
-    pop af
 ret
 OnButtonDown:
     push af
-        ld bc,$FFEF ;//remove 16pix/256frame to y speed
+    push bc
+    push de
+    push hl 
+        ld bc,$FFFA ;//remove 5pix/256frame to y speed
         ld hl,(speedY)
         add hl,bc
         ld (speedY),hl
+
+       
+        ;draw fire sprite
+        ld bc,(posX)
+        ld a,b
+        add a,$4;x+4
+        ld h,a;x in h
+        ld bc,(posY)
+        ld a,b
+        add a,$18;y+24
+        ld l,a;y in l
+        ld d,$24;number of the tile in VRAM in d
+        ld e,$6;sprite index in e
+        call SpriteSet8x8
+    pop hl
+    pop de
+    pop bc
     pop af
 ret
 OnButtonLeft:
     push af
-        ld bc,$0010 ;//add 16pix/256frame to x speed
+    push bc
+    push de
+    push hl 
+        ld bc,$0005 ;//add 5pix/256frame to x speed
         ld hl,(speedX)
         add hl,bc
         ld (speedX),hl
+        ;draw fire sprite
+        ld bc,(posX)
+        ld a,b
+        sub $08;x-8
+        ld h,a;x in h
+        ld bc,(posY)
+        ld a,b
+        add a,$08;y+8
+        ld l,a;y in l
+        ld d,$23;number of the tile in VRAM in d
+        ld e,$6;sprite index in e
+        call SpriteSet8x8
+     pop hl
+    pop de
+    pop bc
     pop af
 ret
 OnButtonRight:
     push af
-        ld bc,$FFEF ;//remove 16pix/256frame to x speed
+    push bc
+    push de
+    push hl 
+        ld bc,$FFFA ;//remove 5pix/256frame to x speed
         ld hl,(speedX)
         add hl,bc
         ld (speedX),hl
+        ;draw fire sprite
+        ld bc,(posX)
+        ld a,b
+        add a,$10;x+16
+        ld h,a;x in h
+        ld bc,(posY)
+        ld a,b
+        add a,$08;y+8
+        ld l,a;y in l
+        ld d,$25;number of the tile in VRAM in d
+        ld e,$6;sprite index in e
+        call SpriteSet8x8
+     pop hl
+    pop de
+    pop bc
     pop af
 ret
 
@@ -328,7 +360,8 @@ vblank:
     push hl
     in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
 
-    call ReadButtons
+    ld e,$05 ;only the rocket is shown on every image
+    call SetLastSprite
 
     ;mechanics
     ;increment Y-speed (gravity)
@@ -348,18 +381,17 @@ vblank:
     add hl,bc
     ld (posY),hl
     
+    call ReadButtons
     
     ;draw sprite
     ld bc,(posX)    
     ld h,b;x in h
     ld bc,(posY)    
     ld l,b;y in l
-
-    ;ld h,50;x in h
-    ;ld l,30;y in l
     ld d,$1d;number of the tile in VRAM in d
-    ld e,$0;sprite index in e, must be 0?
+    ld e,$0;sprite index in e, here these are the first sprites used
     call SpriteSet16x24
+
 
     pop hl
     pop de

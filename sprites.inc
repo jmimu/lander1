@@ -1,9 +1,23 @@
 ;--------------------------------------------------------------------
+SetLastSprite:
+  ;sprite index in e
+  ld a, e
+  inc a
+  out ($bf), a
+  ld a, $7f
+  out ($bf), a
+  
+  ld a, $C0 ;set $C0 to the y of sprite e+1 = e is the last sprite to print
+  out ($be), a
+ret
+
+;--------------------------------------------------------------------
 SpriteSet8x8:
   ;x in h
   ;y in l
   ;n in d
   ;sprite index in e
+
   ;vdp set addr
   ld a, e
   out ($bf), a

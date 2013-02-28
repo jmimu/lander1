@@ -11,7 +11,7 @@ OFILES = main.o
 all: $(OFILES) $(OFILES) makefile
 	$(LD) $(LDFLAGS) linkfile rom.sms
 
-main.o: main.asm $(OFILES)
+main.o: main.asm $(IFILES)
 	$(CC) $(CFLAGS) main.asm main.o
 
 
