@@ -46,6 +46,14 @@ posY                     dw ; multiplied by 2^8
     im 1            ; Interrupt mode 1
     jp main         ; jump to main program
 
+
+.org $0038
+;==============================================================
+; Vertical Blank interrupt
+;==============================================================
+    jp vblank
+
+
 .org $0066
 ;==============================================================
 ; Pause button handler
@@ -62,7 +70,9 @@ posY                     dw ; multiplied by 2^8
 ; Main program
 ;==============================================================
 main:
-    ld sp, $dff0 ;where stack ends
+    ld sp, $dff0 ;where stack ends ;$dff0
+
+
 
     ;==============================================================
     ; Set up VDP registers
@@ -160,7 +170,7 @@ main:
 
 
     ; Turn screen on
-    ld a,%11000000
+    ld a,%11100000
 ;          |||| |`- Zoomed sprites -> 16x16 pixels
 ;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
 ;          |||`---- 30 row/240 line mode
@@ -175,9 +185,9 @@ main:
 
 
     ;variables initialization
-    ld hl,$5
+    ld hl,$50
     ld (speedX),hl
-    ld hl,$0000
+    ld hl,$FFA0
     ld (speedY),hl
     ld hl,$200
     ld (posX),hl
@@ -187,14 +197,145 @@ main:
 
     call WaitForButton
 
+    ei;enable interruption (for vblank)
+
+
+
+;do nothing... wait for vblank
 MainLoop:
+    ;call vblank
+
+    jp MainLoop
+
+WaitForButton:
+    push af
+      -:in a,($dc)
+        and %00010000
+        cp  %00000000
+        jp nz,-
+        ; Button down, wait for it to go up
+      -:in a,($dc)
+        and %00010000
+        cp  %00010000
+        jp nz,-
+    pop af
+    ret
+
+ReadButtons:
+    push af
+        in a,($dc)
+        and %00010000
+        cp  %00000000
+        jr nz,+
+        call OnButton1
+
+    +:  
+        in a,($dc)
+        and %00100000
+        cp  %00000000
+        jr nz,+
+        call OnButton2
     
+    +:  
+        in a,($dc)
+        and %00000001
+        cp  %00000000
+        jr nz,+
+        call OnButtonUp
+    
+    +:  
+        in a,($dc)
+        and %00000010
+        cp  %00000000
+        jr nz,+
+        call OnButtonDown
+    
+    +:  
+        in a,($dc)
+        and %00000100
+        cp  %00000000
+        jr nz,+
+        call OnButtonLeft
+
+    +:  
+        in a,($dc)
+        and %00001000
+        cp  %00000000
+        jr nz,+
+        call OnButtonRight
+    +:
+    pop af
+ret
+ 
+OnButton1:
+    push af
+        ;ld bc,$FFEF ;//remove 16pix/256frame to y speed
+        ;ld hl,(speedY)
+        ;add hl,bc
+        ;ld (speedY),hl
+    pop af
+ret
+OnButton2:
+    push af
+        ;ld bc,$FFEF ;//remove 16pix/256frame to y speed
+        ;ld hl,(speedY)
+        ;add hl,bc
+        ;ld (speedY),hl
+    pop af
+ret
+OnButtonUp:
+    push af
+        ;ld bc,$FFEF ;//remove 16pix/256frame to y speed
+        ;ld hl,(speedY)
+        ;add hl,bc
+        ;ld (speedY),hl
+    pop af
+ret
+OnButtonDown:
+    push af
+        ld bc,$FFEF ;//remove 16pix/256frame to y speed
+        ld hl,(speedY)
+        add hl,bc
+        ld (speedY),hl
+    pop af
+ret
+OnButtonLeft:
+    push af
+        ld bc,$0010 ;//add 16pix/256frame to x speed
+        ld hl,(speedX)
+        add hl,bc
+        ld (speedX),hl
+    pop af
+ret
+OnButtonRight:
+    push af
+        ld bc,$FFEF ;//remove 16pix/256frame to x speed
+        ld hl,(speedX)
+        add hl,bc
+        ld (speedX),hl
+    pop af
+ret
+
+
+
+
+
+
+vblank:
+    push af
+    push bc
+    push de
+    push hl
+    in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
+
+    call ReadButtons
+
     ;mechanics
     ;increment Y-speed (gravity)
     ld hl,(speedY)
     inc hl
-    ;if y speed>255, make it 0
-    ld h,0    
+    inc hl
+    inc hl
     ld (speedY),hl
     ;update x pos
     ld bc,(posX)
@@ -220,21 +361,12 @@ MainLoop:
     ld e,$0;sprite index in e, must be 0?
     call SpriteSet16x24
 
-
-    jp MainLoop
-
-WaitForButton:
-    push af
-      -:in a,($dc)
-        and %00010000
-        cp  %00000000
-        jp nz,-
-        ; Button down, wait for it to go up
-      -:in a,($dc)
-        and %00010000
-        cp  %00010000
-        jp nz,-
+    pop hl
+    pop de
+    pop bc
     pop af
+
+    ei
     ret
 
 
