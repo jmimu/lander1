@@ -5,13 +5,13 @@ LD = ../wla_dx_9.5/binaries/wlalink
 LDFLAGS = -vds
 
 SFILES = main.asm
-IFILES = 
+IFILES = init.inc sprites.inc data.inc
 OFILES = main.o
 
-all: $(OFILES) makefile
+all: $(OFILES) $(OFILES) makefile
 	$(LD) $(LDFLAGS) linkfile rom.sms
 
-main.o: main.asm
+main.o: main.asm $(OFILES)
 	$(CC) $(CFLAGS) main.asm main.o
 
 

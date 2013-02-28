@@ -25,7 +25,10 @@ banks 1
 ; RAM section
 ;==============================================================
 .ramsection "variables" slot 3
-compteur                     db
+speedX                     dw ; multiplied by 2^8
+speedY                     dw ; multiplied by 2^8
+posX                     dw ; multiplied by 2^8
+posY                     dw ; multiplied by 2^8
 .ends
 
 
@@ -144,8 +147,8 @@ main:
     ld a,$38|$40
     out ($bf),a
     ; 2. Output tilemap data
-    ld hl,Tilemap1Start
-    ld bc,Tilemap1End-Tilemap1Start  ; Counter for number of bytes to write
+    ld hl,TilemapStart
+    ld bc,TilemapEnd-TilemapStart  ; Counter for number of bytes to write
     -:
         ld a,(hl)    ; Get data byte
         out ($be),a
@@ -171,35 +174,54 @@ main:
 
 
 
-    ; Infinite loop to stop program
-    xor a
-    ld (compteur),a ;init couleur
-Loop:
+    ;variables initialization
+    ld hl,$5
+    ld (speedX),hl
+    ld hl,$0000
+    ld (speedY),hl
+    ld hl,$200
+    ld (posX),hl
+    ld hl,$100
+    ld (posY),hl
+
+
     call WaitForButton
+
+MainLoop:
     
-  ;  ;update palette
-  ;  ; 1. Set VRAM write address to CRAM (palette) address 0 (for palette index 0)
-  ;  ; by outputting $c000 ORed with $0000
-  ;  ld a,$00;00 pour fond, 01 pour texte
-  ;  out ($bf),a
-  ;  ld a,$c0
-  ;  out ($bf),a
-  ;  ; 2. Output colour data
-  ;  ld a,(compteur)
-  ;  out ($be),a
-    ld a,(compteur)
-    inc a
-    ld (compteur),a
+    ;mechanics
+    ;increment Y-speed (gravity)
+    ld hl,(speedY)
+    inc hl
+    ;if y speed>255, make it 0
+    ld h,0    
+    ld (speedY),hl
+    ;update x pos
+    ld bc,(posX)
+    ld hl, (speedX)
+    add hl,bc
+    ld (posX),hl
+    ;update y pos
+    ld bc,(posY)
+    ld hl, (speedY)
+    add hl,bc
+    ld (posY),hl
+    
     
     ;draw sprite
-    ld a,(compteur)
-    ld h,a;x in h
-    ld l,a;y in l
-    ld d,20;number of the tile in VRAM in d
-    ld e,$0;sprite index in e
-    call SpriteSet16x16
+    ld bc,(posX)    
+    ld h,b;x in h
+    ld bc,(posY)    
+    ld l,b;y in l
 
-    jp Loop
+    ;ld h,50;x in h
+    ;ld l,30;y in l
+    ld d,$1d;number of the tile in VRAM in d
+    ld e,$0;sprite index in e, must be 0?
+    call SpriteSet16x24
+
+
+    jp MainLoop
 
 WaitForButton:
     push af
