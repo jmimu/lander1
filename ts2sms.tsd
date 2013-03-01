@@ -1,0 +1,104 @@
+; --------------------------------------------------------
+; Tile Studio Definition for use with Sega Master System
+; development in Wla dx
+; 
+;
+; Version 1.0 - January 16, 2011
+; 
+; --------------------------------------------------------
+
+; Dave 2011
+; http://racethebeam.blogspot.fr/2011/01/tile-studio-definition-file-for-sms.html
+
+
+; Tile Studio Definition File For SMS Deveopment in WLA DX
+; I put together a very basic Tile Studio Defintion file for use with Tile Studio.
+; This will generate a python file named "map.py" that when executed exports the
+; Tile Studio  palette, tiles and tilemap into a format suitable for WLA DX assembler.
+; The output file is named "map.txt" and is created in the same directory as the python script.
+; Note: The entire map is limited to a single 16 color palette and tile 0 should
+; be filled with your background color.
+
+
+#file map.py
+
+#tileset
+
+ts_palette =
+#palettedata "[" ", " "]"
+<RGB>
+#end palettedata
+
+tile_base_index = 0
+ts_tiles = []
+#tile 
+ts_tiles.append
+#tiledata "([["  ","  ","  "],["  "]])" ""
+<Pixel>
+#end tiledata
+#end tile
+
+#map
+ts_mapwidth = <MapWidth>
+ts_mapheight = <MapHeight>
+ts_map  =
+#mapdata  "[\n["  ","  ",\n"  "],\n["  "]\n]"
+ <TileNumber> 
+#end mapdata
+#end map
+#end tileset
+
+"""
+Converts a single row(8 pixels) of a tile into sms format.
+Inputs: pixels - a list of 8 4 bit palette indexes where the first list item contains palette index for pixel 7, the second for pixel 6 etc.
+Outputs: List of four bytes where the first byte contains bit 0 of each pixel,  the second contains bit 1 of each pixel and so on.
+"""
+
+def ConvertRow(pixels):
+    out = []
+    for i in range(4):
+        out_byte = 0
+        for j in range(8):
+
+            out_byte += ((pixels[7-j] \>\> i) & 0x1) \<\< j 
+        out.append( out_byte )
+    return out
+
+"""
+
+Converts a 24bit per pixel color to 6 bit per pixel.
+Inputs: rgb_val  - A 24 bit color in format bbbbbbbbggggggggrrrrrrrr
+Outputs:  6 bit per color representation of input in format xxbbggrr
+"""
+
+def Convert24bppTo6bpp(rgb_val):
+    red = (rgb_val & 0xc0) 
+    green = ((rgb_val \>\> 0x08)  & 0xc0) 
+    blue = ((rgb_val \>\> 0x10) & 0xc0)
+    return (red \>\> 0x06) | (green \>\> 0x04) | (blue  \>\> 0x02)
+
+def Main():
+    f = open("Map.txt","w")
+    f.write("\\nPaletteStart:\\n")
+    f.write(".db " + ", ".join([ ("$%x" % Convert24bppTo6bpp(color)) for color in ts_palette]))
+    f.write("\\nPaletteEnd:\\n\\n")
+    
+
+    f.write("\\nTilesStart:\\n")
+    for i in range(len(ts_tiles) -1):
+        f.write("\\n;Tile %i\\n" % (i + tile_base_index) )
+        for tile_row in ts_tiles[i]:
+            
+            converted_row = ConvertRow(tile_row)
+            f.write("\\n.db " + " ".join(["$%x" % pixel for pixel in converted_row]))          
+
+    f.write("\\nTilesEnd:\\n\\n")
+
+    f.write("TilemapStart:\\n")
+    for row in ts_map:
+        f.write("\\n.dw " + " ".join(["$" + ("%x" % (max(tile_index -1, 0) + tile_base_index)).zfill(4) for tile_index in row]))
+    f.write("\\nTilemapEnd:\\n\\n")
+    f.close()
+
+Main()
+#end file
