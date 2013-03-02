@@ -10,6 +10,19 @@ SetLastSprite:
   ld a, $C0 ;set $C0 to the y of sprite e+1 = e is the last sprite to print
   out ($be), a
 ret
+;--------------------------------------------------------------------
+HideSprites:
+  ;first sprite to hide index in a
+  ;number of sprites to hide in c
+  out ($bf), a
+  ld a, $7f
+  out ($bf), a
+-:
+  ld a, $C0 ;set $C0 to the y of sprite e+1 = e is the last sprite to print
+  out ($be), a
+  dec c
+  jr nz,-
+ret
 
 ;--------------------------------------------------------------------
 SpriteSet8x8:

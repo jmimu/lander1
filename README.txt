@@ -1,6 +1,4 @@
-MASTER TILE CONVERTER
-http://jmimu.free.fr/mastertileconverter/
-
+Lander1
 
 Copyright (C) 2013  JM Muller
 

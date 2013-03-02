@@ -21,6 +21,14 @@ banksize $4000
 banks 1
 .endro
 
+
+;==============================================================
+; constants
+;==============================================================
+.define digits_tile_number 54
+
+
+
 ;==============================================================
 ; RAM section
 ;==============================================================
@@ -29,6 +37,8 @@ speedX                     dw ; multiplied by 2^8
 speedY                     dw ; multiplied by 2^8
 posX                     dw ; multiplied by 2^8
 posY                     dw ; multiplied by 2^8
+number_of_sprites     db ; number of sprites to draw this frame
+rocket_fuel         dw 
 .ends
 
 
@@ -65,6 +75,8 @@ posY                     dw ; multiplied by 2^8
 ;inclusions
 .include "init.inc"
 .include "sprites.inc"
+.include "text.inc"
+
 
 ;==============================================================
 ; Main program
@@ -168,7 +180,7 @@ main:
         or c
         jp nz,-
 
-
+    
     ; Turn screen on
     ld a,%11100000
 ;          |||| |`- Zoomed sprites -> 16x16 pixels
@@ -183,19 +195,26 @@ main:
 
 
 
+    
+
+    
 
     ;variables initialization
-    ld hl,$50
+    ld hl,$0
     ld (speedX),hl
-    ld hl,$FFA0
+    ld hl,$-16
     ld (speedY),hl
-    ld hl,$200
+    ld hl,$8000
     ld (posX),hl
-    ld hl,$100
+    ld hl,$1000
     ld (posY),hl
+    ld hl,$FF0F
+    ld (rocket_fuel),hl
+
 
 
     call WaitForButton
+
 
     ei;enable interruption (for vblank)
 
@@ -203,8 +222,8 @@ main:
 
 ;do nothing... wait for vblank
 MainLoop:
-
     jp MainLoop
+    
 
 WaitForButton:
     push af
@@ -271,13 +290,26 @@ OnButtonDown:
     push af
     push bc
     push de
-    push hl 
-        ld bc,$FFFA ;//remove 5pix/256frame to y speed
+    push hl
+        ld hl,(rocket_fuel) ;compare rocket_fuel to 0...
+        ld a,h
+        cp 0
+        jp z,+
+        ;if not, decrease rocket_fuel
+        ld bc,$-100
+        add hl,bc
+        ld (rocket_fuel),hl
+        
+        
+        ld a,(number_of_sprites)
+        ld e,a;sprite index in e
+        inc a
+        ld (number_of_sprites),a
+
+        ld bc,$-4 ;//remove 4pix/256frame to y speed
         ld hl,(speedY)
         add hl,bc
         ld (speedY),hl
-
-       
         ;draw fire sprite
         ld bc,(posX)
         ld a,b
@@ -288,8 +320,11 @@ OnButtonDown:
         add a,$18;y+24
         ld l,a;y in l
         ld d,$24;number of the tile in VRAM in d
-        ld e,$6;sprite index in e
         call SpriteSet8x8
+        ld a,(number_of_sprites)
+        ;inc a
+        ld (number_of_sprites),a
+    +:
     pop hl
     pop de
     pop bc
@@ -300,7 +335,21 @@ OnButtonLeft:
     push bc
     push de
     push hl 
-        ld bc,$0005 ;//add 5pix/256frame to x speed
+        ld hl,(rocket_fuel) ;compare rocket_fuel to 0...
+        ld a,h
+        cp 0
+        jp z,+
+        ;if not, decrease rocket_fuel
+        ld bc,$-100
+        add hl,bc
+        ld (rocket_fuel),hl
+        
+        ld a,(number_of_sprites)
+        ld e,a;sprite index in e
+        inc a
+        ld (number_of_sprites),a
+
+        ld bc,$0004 ;//add 4pix/256frame to x speed
         ld hl,(speedX)
         add hl,bc
         ld (speedX),hl
@@ -314,9 +363,9 @@ OnButtonLeft:
         add a,$08;y+8
         ld l,a;y in l
         ld d,$23;number of the tile in VRAM in d
-        ld e,$6;sprite index in e
         call SpriteSet8x8
-     pop hl
+    +:
+    pop hl
     pop de
     pop bc
     pop af
@@ -325,8 +374,22 @@ OnButtonRight:
     push af
     push bc
     push de
-    push hl 
-        ld bc,$FFFA ;//remove 5pix/256frame to x speed
+    push hl
+        ld hl,(rocket_fuel) ;compare rocket_fuel to 0...
+        ld a,h
+        cp 0
+        jp z,+
+        ;if not, decrease rocket_fuel
+        ld bc,$-100
+        add hl,bc
+        ld (rocket_fuel),hl
+        
+        ld a,(number_of_sprites)
+        ld e,a;sprite index in e
+        inc a
+        ld (number_of_sprites),a
+
+        ld bc,$-4 ;//remove 4pix/256frame to x speed
         ld hl,(speedX)
         add hl,bc
         ld (speedX),hl
@@ -340,9 +403,9 @@ OnButtonRight:
         add a,$08;y+8
         ld l,a;y in l
         ld d,$25;number of the tile in VRAM in d
-        ld e,$6;sprite index in e
         call SpriteSet8x8
-     pop hl
+    +:
+    pop hl
     pop de
     pop bc
     pop af
@@ -360,13 +423,14 @@ vblank:
     push hl
     in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
 
-    ld e,$05 ;only the rocket is shown on every image
-    call SetLastSprite
-
+    ld a,$06 ; at least 6 sprites to show (rocket)
+    ld (number_of_sprites),a
+    ld c,$03 ; 3 may have to be hided
+    call HideSprites
+    
     ;mechanics
     ;increment Y-speed (gravity)
     ld hl,(speedY)
-    inc hl
     inc hl
     inc hl
     ld (speedY),hl
@@ -381,7 +445,10 @@ vblank:
     add hl,bc
     ld (posY),hl
     
-    call ReadButtons
+    call ReadButtons ;updates number_of_sprites
+    
+
+
     
     ;draw sprite
     ld bc,(posX)    
@@ -392,7 +459,14 @@ vblank:
     ld e,$0;sprite index in e, here these are the first sprites used
     call SpriteSet16x24
 
-
+    ;draw texts
+    ld hl,(rocket_fuel)
+    ld e,h;value (8bit) in e
+    ld c,5 ;col (tiles) in c
+    ld l,0 ;line (tiles) in l
+    call PrintInt
+    
+    
     pop hl
     pop de
     pop bc
