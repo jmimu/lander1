@@ -39,6 +39,8 @@ banks 1
 .define fuel_use $-100
 .define speedX_tolerance $40 ;must be < $80 !
 .define speedY_tolerance $40
+.define level_mem_size 1824 ;size of 1 palette + 1 tilemap
+.define number_of_levels 2 ;
 
 
 
@@ -106,7 +108,17 @@ main:
     ;==============================================================
     call initVDP
 
-
+    ld a,1
+    ld (current_level),a
+game_start:
+    ;check if end of game
+    ld a,(current_level)
+    dec a
+    cp number_of_levels
+    jr nz,+
+    ld a,1;restart the game!
+    ld (current_level),a
+  +:
 
     ;==============================================================
     ; Clear VRAM
@@ -126,6 +138,21 @@ main:
         or c
         jp nz,ClearVRAMLoop
 
+
+    ;load palette of current level
+    ;current_level
+    ld hl,Palette1Start
+    ld a,(current_level)
+    ld bc,level_mem_size
+  -:
+    dec a
+    cp 0
+    jr z,+
+    add hl,bc
+    jr -
+  +:;hl is where the palette of the level starts
+    
+    
     ;==============================================================
     ; Load palette
     ;==============================================================
@@ -136,8 +163,8 @@ main:
     ld a,$c0
     out ($bf),a
     ; 2. Output colour data
-    ld hl,PaletteStart
-    ld b,(PaletteEnd-PaletteStart)
+    ;ld hl,Palette1Start
+    ld b,(Palette1End-Palette1Start)
     ld c,$be
     otir
 
@@ -194,9 +221,25 @@ main:
     ld bc,TextHelloEnd-TextHelloStart
     ld b,c;text length in b
     ld c,5;col (tiles) in c
-    ld l,15;line (tiles) in l
+    ld l,13;line (tiles) in l
     ld de,TextHelloStart;text pointer in de
     call PrintText
+    
+    ;draw level text
+    ld bc,TextLevelEnd-TextLevelStart
+    ld b,c;text length in b
+    ld c,8;col (tiles) in c
+    ld l,15;line (tiles) in l
+    ld de,TextLevelStart;text pointer in de
+    call PrintText
+    
+    ;draw level number text
+    ld c,25;col (tiles) in c
+    ld l,15;line (tiles) in l
+    ld a,(current_level)
+    ld e,a;value (8bit) in e
+    call PrintInt
+    
     
     call WaitForButton
 
@@ -212,8 +255,8 @@ main:
     ld a,$38|$40
     out ($bf),a
     ; 2. Output tilemap data
-    ld hl,TilemapStart
-    ld bc,TilemapEnd-TilemapStart  ; Counter for number of bytes to write
+    ld hl,Tilemap1Start
+    ld bc,Tilemap1End-Tilemap1Start  ; Counter for number of bytes to write
     -:
         ld a,(hl)    ; Get data byte
         out ($be),a
@@ -240,11 +283,6 @@ main:
 
     ld a,0
     ld (goto_level),a
-    
-    ld a,1
-    ld (current_level),a
-    
-
 
     ei;enable interruption (for vblank)
 
@@ -505,14 +543,15 @@ vblank:
     or a
     jr z,+
       ;we have to change the level
-      jp main
+      ld (current_level),a
+      jp game_start
     +:
 
 
     ei
     ret
 
-TestCollision:;TODO: problem when UL corner of the rocket is out of screen
+TestCollision:;TODO: using only level1 data!
     push af
     push bc
     push hl
@@ -545,7 +584,7 @@ TestCollision:;TODO: problem when UL corner of the rocket is out of screen
       ld c,l
       ;tile number in bc
       
-      ld hl,TilemapStart
+      ld hl,Tilemap1Start
       add hl,bc
       add hl,bc ;hl is the pointer to the tile number
       
