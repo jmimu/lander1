@@ -140,7 +140,6 @@ game_start:
 
 
     ;load palette of current level
-    ;current_level
     ld hl,Palette1Start
     ld a,(current_level)
     ld bc,level_mem_size
@@ -151,8 +150,6 @@ game_start:
     add hl,bc
     jr -
   +:;hl is where the palette of the level starts
-    
-    
     ;==============================================================
     ; Load palette
     ;==============================================================
@@ -245,6 +242,17 @@ game_start:
 
     
     
+    ;load tilemap of current level
+    ld hl,Tilemap1Start
+    ld a,(current_level)
+    ld bc,level_mem_size
+  -:
+    dec a
+    cp 0
+    jr z,+
+    add hl,bc
+    jr -
+  +:;hl is where the tilemap of the level starts
     ;==============================================================
     ; Write tilemap data
     ;==============================================================
@@ -255,7 +263,7 @@ game_start:
     ld a,$38|$40
     out ($bf),a
     ; 2. Output tilemap data
-    ld hl,Tilemap1Start
+    ;ld hl,Tilemap1Start
     ld bc,Tilemap1End-Tilemap1Start  ; Counter for number of bytes to write
     -:
         ld a,(hl)    ; Get data byte
@@ -583,8 +591,22 @@ TestCollision:;TODO: using only level1 data!
       ld b,h
       ld c,l
       ;tile number in bc
+      push bc
       
+      ;load tilemap of current level
       ld hl,Tilemap1Start
+      ld a,(current_level)
+      ld bc,level_mem_size
+    -:
+      dec a
+      cp 0
+      jr z,+
+      add hl,bc
+      jr -
+    +:;hl is where the tilemap of the level starts
+    
+      pop bc
+      ;ld hl,Tilemap1Start
       add hl,bc
       add hl,bc ;hl is the pointer to the tile number
       
