@@ -29,6 +29,7 @@ I found useful information to start asm SMS developpement on these pages:
  - Z80 instructions set: http://z80-heaven.wikidot.com/instructions-set
  - Heliophobe's simple sprite demo: http://www.smspower.org/Homebrew/SimpleSpriteDemo-SMS
  - 16x16 sprites in Blockhead homebrew: http://www.smspower.org/Homebrew/Blockhead-SMS
+ - mk3man.pdf
 
 ////////////////////////////////////////////////////////////////////////
 

@@ -25,8 +25,15 @@ banks 1
 ;==============================================================
 ; constants
 ;==============================================================
-.define digits_tile_number 54
-
+;tiles
+.define number_of_empty_tiles 13;tile 13 and make collisions
+.define digits_tile_number $43
+.define fire_tile_number $23
+.define explosion_tile_number $27
+.define fuel_tile_number $26
+.define rocket_tile_number 45
+;game
+.define fuel_use 0 ;$-100
 
 
 ;==============================================================
@@ -202,11 +209,11 @@ main:
     ;variables initialization
     ld hl,$0
     ld (speedX),hl
-    ld hl,$-16
+    ld hl,$0
     ld (speedY),hl
     ld hl,$8000
     ld (posX),hl
-    ld hl,$1000
+    ld hl,$1400
     ld (posY),hl
     ld hl,$FF0F
     ld (rocket_fuel),hl
@@ -296,7 +303,7 @@ OnButtonDown:
         cp 0
         jp z,+
         ;if not, decrease rocket_fuel
-        ld bc,$-100
+        ld bc,fuel_use
         add hl,bc
         ld (rocket_fuel),hl
         
@@ -319,7 +326,7 @@ OnButtonDown:
         ld a,b
         add a,$18;y+24
         ld l,a;y in l
-        ld d,$24;number of the tile in VRAM in d
+        ld d,fire_tile_number+1;number of the tile in VRAM in d
         call SpriteSet8x8
         ld a,(number_of_sprites)
         ;inc a
@@ -340,7 +347,7 @@ OnButtonLeft:
         cp 0
         jp z,+
         ;if not, decrease rocket_fuel
-        ld bc,$-100
+        ld bc,fuel_use
         add hl,bc
         ld (rocket_fuel),hl
         
@@ -362,7 +369,7 @@ OnButtonLeft:
         ld a,b
         add a,$08;y+8
         ld l,a;y in l
-        ld d,$23;number of the tile in VRAM in d
+        ld d,fire_tile_number;number of the tile in VRAM in d
         call SpriteSet8x8
     +:
     pop hl
@@ -380,7 +387,7 @@ OnButtonRight:
         cp 0
         jp z,+
         ;if not, decrease rocket_fuel
-        ld bc,$-100
+        ld bc,fuel_use
         add hl,bc
         ld (rocket_fuel),hl
         
@@ -402,7 +409,7 @@ OnButtonRight:
         ld a,b
         add a,$08;y+8
         ld l,a;y in l
-        ld d,$25;number of the tile in VRAM in d
+        ld d,fire_tile_number+2;number of the tile in VRAM in d
         call SpriteSet8x8
     +:
     pop hl
@@ -447,25 +454,23 @@ vblank:
     
     call ReadButtons ;updates number_of_sprites
     
-
-
-    
-    ;draw sprite
+    ;draw rocket sprites
     ld bc,(posX)    
     ld h,b;x in h
     ld bc,(posY)    
     ld l,b;y in l
-    ld d,$1d;number of the tile in VRAM in d
+    ld d,rocket_tile_number;number of the tile in VRAM in d
     ld e,$0;sprite index in e, here these are the first sprites used
     call SpriteSet16x24
 
     ;draw texts
     ld hl,(rocket_fuel)
     ld e,h;value (8bit) in e
-    ld c,5 ;col (tiles) in c
+    ld c,1 ;col (tiles) in c
     ld l,0 ;line (tiles) in l
     call PrintInt
     
+    call TestCollision
     
     pop hl
     pop de
@@ -475,7 +480,104 @@ vblank:
     ei
     ret
 
+TestCollision:
+    push af
+    push bc
+    push hl
+    
+      ;tests if point posX+8,posY+24 is on a full tile
+      ld bc,(posX)    
+      ld h,b
+      srl h
+      srl h
+      srl h
+      inc h ;add 8 pix!
+      ;x in h (in tiles)
+      
+      ld bc,(posY)    
+      ld l,b
+      srl l
+      srl l
+      srl l
+      inc l;add 24 pix!
+      inc l
+      inc l
+      ;y in l (in tiles)
+      
+      ;push bc
+      ;push de
+      ;push hl
+      ;  ld e,h;value (8bit) in e
+      ;  ld c,5 ;col (tiles) in c
+      ;  ld l,1 ;line (tiles) in l
+      ;  call PrintInt
+      ;pop hl
+      ;pop de
+      ;pop bc
+      ;push bc
+      ;push de
+      ;push hl
+      ;  ld e,l;value (8bit) in e
+      ;  ld c,9 ;col (tiles) in c
+      ;  ld l,1 ;line (tiles) in l
+      ;  call PrintInt
+      ;pop hl
+      ;pop de
+      ;pop bc
+      
+      ;compute tile number
+      ld b,0
+      ld c,h;x in bc
+      call Multby32
+      add hl,bc
+      ld b,h
+      ld c,l
+      ;tile number in bc
+      
+      ;push bc
+      ;push de
+      ;push hl
+      ;  ld e,b;value (8bit) in e
+      ;  ld c,5 ;col (tiles) in c
+      ;  ld l,2 ;line (tiles) in l
+      ;  call PrintInt
+      ;pop hl
+      ;pop de
+      ;pop bc
+      ;push bc
+      ;push de
+      ;push hl
+      ;  ld e,c;value (8bit) in e
+      ;  ld c,9 ;col (tiles) in c
+      ;  ld l,2 ;line (tiles) in l
+      ;  call PrintInt
+      ;pop hl
+      ;pop de
+      ;pop bc
+      
+      ld hl,TilemapStart
+      add hl,bc
+      add hl,bc ;hl is the pointer to the tile number
+      
+      
 
+
+
+      ;if (hl)>number_of_empty_tiles
+      ld a, number_of_empty_tiles
+      ld b,a
+      ld a,(hl)
+      cp b
+      jr c,+
+      
+      ;rebounce
+      ld hl,$-80
+      ld (speedY),hl
+    +:
+    pop hl
+    pop bc
+    pop af
+    ret
 
 
 ;==============================================================
