@@ -37,4 +37,5 @@ List of files:
  - test1.tsp:
  - ts2sms.tsd:
  
+The font tiles come form Maxim example.
 

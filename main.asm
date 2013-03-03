@@ -27,13 +27,19 @@ banks 1
 ;==============================================================
 ;tiles
 .define number_of_empty_tiles 13;tile 13 and make collisions
-.define digits_tile_number $43
+.define digits_tile_number $48
 .define fire_tile_number $23
-.define explosion_tile_number $27
+.define explosion_tile_number $28
 .define fuel_tile_number $26
-.define rocket_tile_number 45
+.define rocket_tile_number $2E
+.define landing_tile_number $27
+.define guy_tile_number $34
+.define diff_tile_ascii $18 ;difference between index in tiles and in ascii
 ;game
-.define fuel_use 0 ;$-100
+.define fuel_use $-100
+.define speedX_tolerance $40 ;must be < $80 !
+.define speedY_tolerance $40
+
 
 
 ;==============================================================
@@ -46,6 +52,8 @@ posX                     dw ; multiplied by 2^8
 posY                     dw ; multiplied by 2^8
 number_of_sprites     db ; number of sprites to draw this frame
 rocket_fuel         dw 
+current_level db
+goto_level db ;0 if no need to change level, n to enter level n
 .ends
 
 
@@ -166,6 +174,34 @@ main:
         ;le premier va plus vite!
         
 
+
+
+    
+    ; Turn screen on
+    ld a,%11100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Enable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+
+
+    ;draw hello text
+    ld bc,TextHelloEnd-TextHelloStart
+    ld b,c;text length in b
+    ld c,5;col (tiles) in c
+    ld l,15;line (tiles) in l
+    ld de,TextHelloStart;text pointer in de
+    call PrintText
+    
+    call WaitForButton
+
+    
+    
     ;==============================================================
     ; Write tilemap data
     ;==============================================================
@@ -187,25 +223,9 @@ main:
         or c
         jp nz,-
 
-    
-    ; Turn screen on
-    ld a,%11100000
-;          |||| |`- Zoomed sprites -> 16x16 pixels
-;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
-;          |||`---- 30 row/240 line mode
-;          ||`----- 28 row/224 line mode
-;          |`------ VBlank interrupts
-;          `------- Enable display
-    out ($bf),a
-    ld a,$81
-    out ($bf),a
-
-
 
     
-
     
-
     ;variables initialization
     ld hl,$0
     ld (speedX),hl
@@ -218,9 +238,12 @@ main:
     ld hl,$FF0F
     ld (rocket_fuel),hl
 
-
-
-    call WaitForButton
+    ld a,0
+    ld (goto_level),a
+    
+    ld a,1
+    ld (current_level),a
+    
 
 
     ei;enable interruption (for vblank)
@@ -363,7 +386,7 @@ OnButtonLeft:
         ;draw fire sprite
         ld bc,(posX)
         ld a,b
-        sub $08;x-8
+        sub $04;x-4
         ld h,a;x in h
         ld bc,(posY)
         ld a,b
@@ -403,7 +426,7 @@ OnButtonRight:
         ;draw fire sprite
         ld bc,(posX)
         ld a,b
-        add a,$10;x+16
+        add a,$0C;x+12
         ld h,a;x in h
         ld bc,(posY)
         ld a,b
@@ -471,16 +494,25 @@ vblank:
     call PrintInt
     
     call TestCollision
-    
+        
     pop hl
     pop de
     pop bc
     pop af
 
+    ;check if level finished
+    ld a,(goto_level)
+    or a
+    jr z,+
+      ;we have to change the level
+      jp main
+    +:
+
+
     ei
     ret
 
-TestCollision:
+TestCollision:;TODO: problem when UL corner of the rocket is out of screen
     push af
     push bc
     push hl
@@ -504,27 +536,6 @@ TestCollision:
       inc l
       ;y in l (in tiles)
       
-      ;push bc
-      ;push de
-      ;push hl
-      ;  ld e,h;value (8bit) in e
-      ;  ld c,5 ;col (tiles) in c
-      ;  ld l,1 ;line (tiles) in l
-      ;  call PrintInt
-      ;pop hl
-      ;pop de
-      ;pop bc
-      ;push bc
-      ;push de
-      ;push hl
-      ;  ld e,l;value (8bit) in e
-      ;  ld c,9 ;col (tiles) in c
-      ;  ld l,1 ;line (tiles) in l
-      ;  call PrintInt
-      ;pop hl
-      ;pop de
-      ;pop bc
-      
       ;compute tile number
       ld b,0
       ld c,h;x in bc
@@ -534,46 +545,89 @@ TestCollision:
       ld c,l
       ;tile number in bc
       
-      ;push bc
-      ;push de
-      ;push hl
-      ;  ld e,b;value (8bit) in e
-      ;  ld c,5 ;col (tiles) in c
-      ;  ld l,2 ;line (tiles) in l
-      ;  call PrintInt
-      ;pop hl
-      ;pop de
-      ;pop bc
-      ;push bc
-      ;push de
-      ;push hl
-      ;  ld e,c;value (8bit) in e
-      ;  ld c,9 ;col (tiles) in c
-      ;  ld l,2 ;line (tiles) in l
-      ;  call PrintInt
-      ;pop hl
-      ;pop de
-      ;pop bc
-      
       ld hl,TilemapStart
       add hl,bc
       add hl,bc ;hl is the pointer to the tile number
       
       
-
-
-
       ;if (hl)>number_of_empty_tiles
       ld a, number_of_empty_tiles
       ld b,a
       ld a,(hl)
       cp b
-      jr c,+
+      jr c,end_TestCollision
+      ;it's a land tile... check if it is a correct zone
+      ld b,landing_tile_number
+      cp b
+      jr nz,destroy
+      ;good place, now check speeds
+      ;in x: TODO : use speedX_tolerance
+      ld hl,(speedX)  
+      ;ld bc,speedX_tolerance
+      ;add hl,bc ;hl must be < speedX_tolerance*2
+      ld bc,$80
+      add hl,bc ;h must be < 1
+      ld a,0
+      cp h
+      jr nz,destroy
+      ;in y: TODO : use speedY_tolerance
+      ld hl,(speedY)  
+      ld bc,$80
+      add hl,bc ;h must be < 1
+      ld a,0
+      cp h
+      jr nz,destroy
       
-      ;rebounce
-      ld hl,$-80
-      ld (speedY),hl
-    +:
+      
+      ;draw lander ; maybe draw it as a background ?
+      ld bc,(posX)    
+      ld h,b;x in h
+      ld bc,(posY)    
+      ld l,b;y in l
+      ld bc,$0808
+      add hl,bc ;draw the guy a little further
+      ld d,guy_tile_number;number of the tile in VRAM in d
+      ld e,$6;sprite index in e, 6 because we draw the rocket too
+      call SpriteSet16x16
+      ;next level
+      ld a,(current_level)
+      inc a
+      ld (goto_level),a
+      ;draw text
+      ld bc,TextWonEnd-TextWonStart
+      ld b,c;text length in b
+      ld c,5;col (tiles) in c
+      ld l,15;line (tiles) in l
+      ld de,TextWonStart;text pointer in de
+      call PrintText
+      call WaitForButton
+      
+      jp end_TestCollision
+      
+    destroy:
+        ;show explosion
+        ld bc,(posX)    
+        ld h,b;x in h
+        ld bc,(posY)    
+        ld l,b;y in l
+        ld d,explosion_tile_number;number of the tile in VRAM in d
+        ld e,$0;sprite index in e, 0 because we replace the rocket
+        call SpriteSet16x24
+      
+        ld a,(current_level)
+        ld (goto_level),a
+        ;draw text
+        ld bc,TextLostEnd-TextLostStart
+        ld b,c;text length in b
+        ld c,5;col (tiles) in c
+        ld l,15;line (tiles) in l
+        ld de,TextLostStart;text pointer in de
+        call PrintText
+        
+        call WaitForButton
+        
+        
+    end_TestCollision:
     pop hl
     pop bc
     pop af
