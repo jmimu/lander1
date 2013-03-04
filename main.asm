@@ -36,11 +36,11 @@ banks 1
 .define guy_tile_number $34
 .define diff_tile_ascii $18 ;difference between index in tiles and in ascii
 ;game
-.define fuel_use $-100
+.define fuel_use $-80
 .define speedX_tolerance $40 ;must be < $80 !
 .define speedY_tolerance $40
 .define level_mem_size 1824 ;size of 1 palette + 1 tilemap
-.define number_of_levels 2 ;
+.define number_of_levels 4 ;
 
 
 
@@ -110,6 +110,10 @@ main:
 
     ld a,1
     ld (current_level),a
+
+    ld hl,$FF0F
+    ld (rocket_fuel),hl
+
 game_start:
     ;check if end of game
     ld a,(current_level)
@@ -118,7 +122,34 @@ game_start:
     jr nz,+
     ld a,1;restart the game!
     ld (current_level),a
+    
+    ;draw congratulations text
+    ld bc,TextCongratEnd-TextCongratStart
+    ld b,c;text length in b
+    ld c,0;col (tiles) in c
+    ld l,8;line (tiles) in l
+    ld de,TextCongratStart;text pointer in de
+    call PrintText    
+    
+    ;draw level number text
+    ld hl,(rocket_fuel)
+    ld c,24;col (tiles) in c
+    ld l,9;line (tiles) in l
+    ld e,h;value (8bit) in e
+    call PrintInt
+        
+    call WaitForButton
   +:
+  
+    ;if first level, fill fuel
+    ld a,(current_level)
+    cp 1
+    jr nz,+
+    ld hl,$FF0F
+    ld (rocket_fuel),hl
+  +:
+  
+  
 
     ;==============================================================
     ; Clear VRAM
@@ -218,7 +249,7 @@ game_start:
     ld bc,TextHelloEnd-TextHelloStart
     ld b,c;text length in b
     ld c,5;col (tiles) in c
-    ld l,13;line (tiles) in l
+    ld l,10;line (tiles) in l
     ld de,TextHelloStart;text pointer in de
     call PrintText
     
@@ -226,13 +257,13 @@ game_start:
     ld bc,TextLevelEnd-TextLevelStart
     ld b,c;text length in b
     ld c,8;col (tiles) in c
-    ld l,15;line (tiles) in l
+    ld l,12;line (tiles) in l
     ld de,TextLevelStart;text pointer in de
     call PrintText
     
     ;draw level number text
     ld c,25;col (tiles) in c
-    ld l,15;line (tiles) in l
+    ld l,12;line (tiles) in l
     ld a,(current_level)
     ld e,a;value (8bit) in e
     call PrintInt
@@ -286,8 +317,6 @@ game_start:
     ld (posX),hl
     ld hl,$1400
     ld (posY),hl
-    ld hl,$FF0F
-    ld (rocket_fuel),hl
 
     ld a,0
     ld (goto_level),a
@@ -397,9 +426,6 @@ OnButtonDown:
         ld l,a;y in l
         ld d,fire_tile_number+1;number of the tile in VRAM in d
         call SpriteSet8x8
-        ld a,(number_of_sprites)
-        ;inc a
-        ld (number_of_sprites),a
     +:
     pop hl
     pop de
@@ -658,7 +684,7 @@ TestCollision:;TODO: using only level1 data!
       ld bc,TextWonEnd-TextWonStart
       ld b,c;text length in b
       ld c,5;col (tiles) in c
-      ld l,15;line (tiles) in l
+      ld l,10;line (tiles) in l
       ld de,TextWonStart;text pointer in de
       call PrintText
       call WaitForButton
@@ -675,7 +701,8 @@ TestCollision:;TODO: using only level1 data!
         ld e,$0;sprite index in e, 0 because we replace the rocket
         call SpriteSet16x24
       
-        ld a,(current_level)
+        ;ld a,(current_level)
+        ld a,1 ;return to first level
         ld (goto_level),a
         ;draw text
         ld bc,TextLostEnd-TextLostStart
