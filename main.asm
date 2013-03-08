@@ -51,6 +51,7 @@
 ; RAM section
 ;==============================================================
 .ramsection "variables" slot 2
+new_frame                     db ; 0: no; 1: yes
 speedX                     dw ; multiplied by 2^8
 speedY                     dw ; multiplied by 2^8
 posX                     dw ; multiplied by 2^8
@@ -81,7 +82,13 @@ goto_level db ;0 if no need to change level, n to enter level n
 ;==============================================================
 ; Vertical Blank interrupt
 ;==============================================================
-    jp vblank
+    push af
+      in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
+      ;do something only if vblank (we have only vblank interrupt, so nothing to do)     
+      ld a,1
+      ld (new_frame),a
+    pop af
+    ei ;re-enable interrupt
     reti
 
 
@@ -307,7 +314,7 @@ game_start:
         dec bc
         ld a,b
         or c
-        jp nz,-
+        jr nz,-
 
 
     
@@ -324,13 +331,28 @@ game_start:
 
     ld a,0
     ld (goto_level),a
+    
+    ld a,1
+    ld (new_frame),a
 
     ei;enable interruption (for vblank)
 
 
-
-;do nothing... wait for vblank
 MainLoop:
+    call DoGameLogic
+    call WaitForVBlank
+    call UpdateScreen
+    call PSGMOD_Play
+    
+    ;check if level finished
+    ld a,(goto_level)
+    or a
+    jr z,+
+      ;we have to change the level
+      ld (current_level),a
+      jp game_start
+    +:
+    
     jp MainLoop
     
 
@@ -339,12 +361,12 @@ WaitForButton:
       -:in a,($dc)
         and %00010000
         cp  %00000000
-        jp nz,-
+        jr nz,-
         ; Button down, wait for it to go up
       -:in a,($dc)
         and %00010000
         cp  %00010000
-        jp nz,-
+        jr nz,-
     pop af
     ret
 
@@ -518,22 +540,26 @@ OnButtonRight:
 ret
 
 
-
-
-
-
-vblank:
+WaitForVBlank:
     push af
+    -:
+      ld a,(new_frame)
+      cp 0
+      jr z,-
 
-    in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
-    ;do something only if vblank
-    and %10000000
-    jr nz,+
-    pop af
-    ei
-    
+      ld a,0
+      ld (new_frame),a      
+    pop af    
+    ret   
+
+PSGMOD_Play:
     ret
-  +:;this is vblank, do something
+    
+UpdateScreen:
+    ret 
+
+DoGameLogic:
+    push af
   
     push bc
     push de
@@ -549,7 +575,8 @@ vblank:
     ld hl,(speedY)
     inc hl
     inc hl
-    ld (speedY),hl
+    ld (speedY),hl    
+    
     ;update x pos
     ld bc,(posX)
     ld hl, (speedX)
@@ -586,17 +613,6 @@ vblank:
     pop bc
     pop af
 
-    ;check if level finished
-    ld a,(goto_level)
-    or a
-    jr z,+
-      ;we have to change the level
-      ld (current_level),a
-      jp game_start
-    +:
-
-
-    ei
     ret
 
 TestCollision:;TODO: using only level1 data!
