@@ -1,25 +1,28 @@
 ;==============================================================
 ; WLA-DX banking setup
+; Note that this is a frame 2-only setup, allowing large data
+; chunks in the first 32KB.
 ;==============================================================
 .memorymap
    defaultslot 0
    ; ROM area
-   slotsize        $4000
+   slotsize        $8000
    slot            0       $0000
-   slot            1       $4000
-   slot            2       $8000
+   slotsize        $4000
+   slot            1       $8000
    ; RAM area
    slotsize        $2000
-   slot            3       $C000
-   slot            4       $E000
+   slot            2       $C000
+   slot            3       $E000
 .endme
 
-
 .rombankmap
-bankstotal 1
-banksize $4000
-banks 1
+   bankstotal 1
+   banksize $8000
+   banks 1
 .endro
+
+
 
 
 ;==============================================================
@@ -47,7 +50,7 @@ banks 1
 ;==============================================================
 ; RAM section
 ;==============================================================
-.ramsection "variables" slot 3
+.ramsection "variables" slot 2
 speedX                     dw ; multiplied by 2^8
 speedY                     dw ; multiplied by 2^8
 posX                     dw ; multiplied by 2^8
@@ -79,6 +82,7 @@ goto_level db ;0 if no need to change level, n to enter level n
 ; Vertical Blank interrupt
 ;==============================================================
     jp vblank
+    reti
 
 
 .org $0066
@@ -520,11 +524,21 @@ ret
 
 vblank:
     push af
+
+    in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
+    ;do something only if vblank
+    and %10000000
+    jr nz,+
+    pop af
+    ei
+    
+    ret
+  +:;this is vblank, do something
+  
     push bc
     push de
     push hl
-    in a,($bf);clears the interrupt request line from the VDP chip and provides VDP information
-
+  
     ld a,$06 ; at least 6 sprites to show (rocket)
     ld (number_of_sprites),a
     ld c,$03 ; 3 may have to be hided
