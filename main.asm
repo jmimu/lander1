@@ -104,6 +104,7 @@ goto_level db ;0 if no need to change level, n to enter level n
 .include "init.inc"
 .include "sprites.inc"
 .include "text.inc"
+.include "sound.inc"
 
 
 ;==============================================================
@@ -111,8 +112,6 @@ goto_level db ;0 if no need to change level, n to enter level n
 ;==============================================================
 main:
     ld sp, $dff0 ;where stack ends ;$dff0
-
-
 
     ;==============================================================
     ; Set up VDP registers
@@ -126,6 +125,8 @@ main:
     ld (rocket_fuel),hl
 
 game_start:
+    call CutAllSound
+
     ;check if end of game
     ld a,(current_level)
     dec a
@@ -138,14 +139,14 @@ game_start:
     ld bc,TextCongratEnd-TextCongratStart
     ld b,c;text length in b
     ld c,0;col (tiles) in c
-    ld l,8;line (tiles) in l
+    ld l,6;line (tiles) in l
     ld de,TextCongratStart;text pointer in de
     call PrintText    
     
     ;draw level number text
     ld hl,(rocket_fuel)
     ld c,24;col (tiles) in c
-    ld l,9;line (tiles) in l
+    ld l,7;line (tiles) in l
     ld e,h;value (8bit) in e
     call PrintInt
         
@@ -338,7 +339,20 @@ game_start:
     ei;enable interruption (for vblank)
 
 
+    ;test sound
+    ld c,0;channel in c*%10000(max 3*%10000)
+    call EnableChannel
+    
+    ld c,%01100000;channel in c*%10000(max 3*%10000)
+    call EnableChannel
+    
+
+
 MainLoop:
+    ;cut noise channel sound
+    ld c,%01100000;channel in c*%10000(max 3*%10000)
+    call CutOneChannel
+
     call DoGameLogic
     call WaitForVBlank
     call UpdateScreen
@@ -353,10 +367,12 @@ MainLoop:
       jp game_start
     +:
     
+    
     jp MainLoop
     
 
 WaitForButton:
+    call CutAllSound
     push af
       -:in a,($dc)
         and %00010000
@@ -452,6 +468,13 @@ OnButtonDown:
         ld l,a;y in l
         ld d,fire_tile_number+1;number of the tile in VRAM in d
         call SpriteSet8x8
+        
+        ;noise!
+        ld c,%01100000;channel in c*%10000(max 3*%10000)
+        call EnableChannel
+        ld a,%00001000
+        call PlayNoise
+        
     +:
     pop hl
     pop de
@@ -492,6 +515,13 @@ OnButtonLeft:
         ld l,a;y in l
         ld d,fire_tile_number;number of the tile in VRAM in d
         call SpriteSet8x8
+        
+        ;noise!
+        ld c,%01100000;channel in c*%10000(max 3*%10000)
+        call EnableChannel
+        ld a,%00001000
+        call PlayNoise
+        
     +:
     pop hl
     pop de
@@ -532,6 +562,13 @@ OnButtonRight:
         ld l,a;y in l
         ld d,fire_tile_number+2;number of the tile in VRAM in d
         call SpriteSet8x8
+        
+        ;noise!
+        ld c,%01100000;channel in c*%10000(max 3*%10000)
+        call EnableChannel
+        ld a,%00001000
+        call PlayNoise
+        
     +:
     pop hl
     pop de
@@ -553,6 +590,20 @@ WaitForVBlank:
     ret   
 
 PSGMOD_Play:
+    ld c,0;channel in c*%10000(max 3*%10000)
+    ld hl,(posY) ;Tone in hl (max 1024)
+    ;ld l,h
+    ;ld h,%00000011
+    
+    ld a,h
+    ;neg
+    ld l,a
+    ld h,%00000010
+    
+    
+    call PlayTone
+    
+
     ret
     
 UpdateScreen:

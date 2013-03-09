@@ -5,7 +5,7 @@ LD = ../wla_dx_9.5/binaries/wlalink
 LDFLAGS = -vds
 
 SFILES = main.asm
-IFILES = init.inc sprites.inc data.inc text.inc
+IFILES = init.inc sprites.inc data.inc text.inc sound.inc
 OFILES = main.o
 
 all: $(OFILES) $(OFILES) makefile
