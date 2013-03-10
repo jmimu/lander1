@@ -60,6 +60,11 @@ number_of_sprites     db ; number of sprites to draw this frame
 rocket_fuel         dw 
 current_level db
 goto_level db ;0 if no need to change level, n to enter level n
+;music
+music_start_ptr         dw ;pointer
+music_current_ptr         dw ;pointer
+music_tone_duration         db ;when 0 got to next tone
+music_current_tone         dw ;value (for debug)
 .ends
 
 
@@ -123,6 +128,11 @@ main:
 
     ld hl,$FF0F
     ld (rocket_fuel),hl
+
+
+    ld hl,Music1_start;data start in hl
+    call InitMusic
+
 
 game_start:
     call CutAllSound
@@ -339,14 +349,13 @@ game_start:
     ei;enable interruption (for vblank)
 
 
-    ;test sound
-    ld c,0;channel in c*%10000(max 3*%10000)
-    call EnableChannel
+    ;~ ;test sound
+    ;~ ld c,0;channel in c*%10000(max 3*%10000)
+    ;~ call EnableChannel
+    ;~ 
+    ;~ ld c,%01100000;channel in c*%10000(max 3*%10000)
+    ;~ call EnableChannel
     
-    ld c,%01100000;channel in c*%10000(max 3*%10000)
-    call EnableChannel
-    
-
 
 MainLoop:
     ;cut noise channel sound
@@ -590,19 +599,20 @@ WaitForVBlank:
     ret   
 
 PSGMOD_Play:
-    ld c,0;channel in c*%10000(max 3*%10000)
-    ld hl,(posY) ;Tone in hl (max 1024)
-    ;ld l,h
-    ;ld h,%00000011
-    
-    ld a,h
-    ;neg
-    ld l,a
-    ld h,%00000010
-    
-    
-    call PlayTone
-    
+    ;~ ld c,0;channel in c*%10000(max 3*%10000)
+    ;~ ld hl,(posY) ;Tone in hl (max 1024)
+    ;~ ;ld l,h
+    ;~ ;ld h,%00000011
+    ;~ 
+    ;~ ld a,h
+    ;~ ;neg
+    ;~ ld l,a
+    ;~ ld h,%00000010
+    ;~ 
+    ;~ 
+    ;~ call PlayTone
+    ;~ 
+    call PlayMusic
 
     ret
     
@@ -655,6 +665,25 @@ DoGameLogic:
     ld e,h;value (8bit) in e
     ld c,1 ;col (tiles) in c
     ld l,0 ;line (tiles) in l
+    call PrintInt
+    
+    ;draw texts
+    ld a,(music_tone_duration)
+    ld e,a;value (8bit) in e
+    ld c,1 ;col (tiles) in c
+    ld l,1 ;line (tiles) in l
+    call PrintInt
+    
+    
+    ld hl,(music_current_tone)
+    ld e,h;value (8bit) in e
+    ld c,1 ;col (tiles) in c
+    ld l,2 ;line (tiles) in l
+    call PrintInt
+    ld hl,(music_current_tone)
+    ld e,l;value (8bit) in e
+    ld c,5 ;col (tiles) in c
+    ld l,2 ;line (tiles) in l
     call PrintInt
     
     call TestCollision
