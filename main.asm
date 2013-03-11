@@ -350,16 +350,16 @@ game_start:
 
 
     ;~ ;test sound
-    ;~ ld c,0;channel in c*%10000(max 3*%10000)
+    ;~ ld c,0;channel in c*%100000(max 3*%100000)
     ;~ call EnableChannel
     ;~ 
-    ;~ ld c,%01100000;channel in c*%10000(max 3*%10000)
+    ;~ ld c,%01100000;channel in c*%100000(max 3*%100000)
     ;~ call EnableChannel
     
 
 MainLoop:
     ;cut noise channel sound
-    ld c,%01100000;channel in c*%10000(max 3*%10000)
+    ld c,%01100000;channel in c*%100000(max 3*%100000)
     call CutOneChannel
 
     call DoGameLogic
@@ -479,7 +479,7 @@ OnButtonDown:
         call SpriteSet8x8
         
         ;noise!
-        ld c,%01100000;channel in c*%10000(max 3*%10000)
+        ld c,%01100000;channel in c*%100000(max 3*%100000)
         call EnableChannel
         ld a,%00001000
         call PlayNoise
@@ -526,7 +526,7 @@ OnButtonLeft:
         call SpriteSet8x8
         
         ;noise!
-        ld c,%01100000;channel in c*%10000(max 3*%10000)
+        ld c,%01100000;channel in c*%100000(max 3*%100000)
         call EnableChannel
         ld a,%00001000
         call PlayNoise
@@ -573,7 +573,7 @@ OnButtonRight:
         call SpriteSet8x8
         
         ;noise!
-        ld c,%01100000;channel in c*%10000(max 3*%10000)
+        ld c,%01100000;channel in c*%100000(max 3*%100000)
         call EnableChannel
         ld a,%00001000
         call PlayNoise
@@ -599,7 +599,7 @@ WaitForVBlank:
     ret   
 
 PSGMOD_Play:
-    ;~ ld c,0;channel in c*%10000(max 3*%10000)
+    ;~ ld c,0;channel in c*%100000(max 3*%100000)
     ;~ ld hl,(posY) ;Tone in hl (max 1024)
     ;~ ;ld l,h
     ;~ ;ld h,%00000011
@@ -612,6 +612,14 @@ PSGMOD_Play:
     ;~ 
     ;~ call PlayTone
     ;~ 
+    
+    ;play harmonics or not depending on level number
+    ld a,(current_level)
+    and %00000001
+    jr z,+
+    call PlayMusicH
+    ret
+    +:
     call PlayMusic
 
     ret

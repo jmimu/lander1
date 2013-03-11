@@ -33,7 +33,7 @@ CutAllSound:
   ret
 
 CutOneChannel:
-  ;channel in c*%10000(max 3*%10000)
+  ;channel in c*%1000000(max 3*%1000000)
   push af
     ld a,%10011111 ;volume 0 on channel 0
     or c
@@ -42,19 +42,19 @@ CutOneChannel:
   ret
 
 
-EnableChannel: ;max volume...
-  ;channel in c*%10000(max 3*%10000)
+EnableChannel:
+  ;volume in a (max %0000, mute %1111)
+  ;channel in c*%1000000(max 3*%1000000)
   push af
-    ;ld a,%10010000 ;volume max
-    ld a,%10011100 ;volume average
-    or c
+    or %10010000 ;set volume
+    or c ; to channel c
     out ($7f),a
   pop af
   ret
 
 PlayTone:
   ;Tone in hl (max 1024)
-  ;channel in c*%10000(max 3*%10000)
+  ;channel in c*%100000(max 3*%100000)
   push af
   push bc
   push de
@@ -165,7 +165,7 @@ PlayMusic:
   ld a,(bc)
   ld (music_tone_duration),a
   
-  ld c,0;channel in c*%10000(max 3*%10000)
+  ld c,0;channel in c*%100000(max 3*%100000)
   
   ;test if tone==0
   ld a,h
@@ -179,8 +179,92 @@ PlayMusic:
   call CutOneChannel
   ret
  +:
+  ld a,%1000 ;volume
   call EnableChannel
   call PlayTone
-  
 
   ret
+
+PlayMusicH: ;with harmonics
+  ;check is current tone is still played
+  ld a,(music_tone_duration)
+  dec a
+  ld (music_tone_duration),a
+  cp 0
+  jr z,+
+    ret
+  +:
+  ;have to change tone...
+  ld hl,(music_current_ptr)
+  inc hl
+  inc hl
+  inc hl;go 3 bytes later
+  ld (music_current_ptr),hl
+  
+  ;check if end of partition
+  ld bc,(music_current_ptr)
+  ld a,(bc)
+  cp $FF
+  jr nz,+ ;(music_current_ptr) != $ff, not end of track
+  
+  inc bc
+  ld a,(bc)
+  cp $FF
+  jr nz,+;(music_current_ptr+1) != $ff, not end of track
+  
+  ;have to loop music
+  ld hl,(music_start_ptr)
+  ld (music_current_ptr),hl ;return to begin of track
+  
+  +:
+  
+  ;play tone:
+  ld bc,(music_current_ptr)
+  ld a,(bc)
+  ld h,a
+  inc bc
+  ld a,(bc)
+  ld l,a;tone in hl
+  
+  ld (music_current_tone),hl
+  
+  ;get duration
+  inc bc
+  ld a,(bc)
+  ld (music_tone_duration),a
+  
+  
+  ;test if tone==0
+  ld a,h
+  cp $00
+  jr nz,+
+
+  ld a,l
+  cp $00
+  jr nz,+;(music_current_ptr+1) != $00, not silence
+  ;this is a pause, so cut sound
+  ld c,0;channel in c*%100000(max 3*%100000)
+  call CutOneChannel
+  ld c,%00100000;channel in c*%100000(max 3*%100000)
+  call CutOneChannel
+  ;ld c,%01000000;channel in c*%100000(max 3*%100000)
+  ;call CutOneChannel
+  ret
+ +:
+  ld c,0;channel in c*%100000(max 3*%100000)
+  ld a,%1000 ;volume
+  call EnableChannel
+  call PlayTone
+  add hl,hl ;8 tones (5 would be better...)
+  ld c,%00100000;channel in c*%100000(max 3*%100000)
+  ld a,%1100
+  ;call EnableChannel
+  ;call PlayTone
+  ;add hl,hl
+  ;ld c,%01000000;channel in c*%100000(max 3*%100000)
+  ;ld a,%1110
+  ;call EnableChannel
+  ;call PlayTone
+
+  ret
+
