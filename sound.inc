@@ -62,6 +62,8 @@ EnableChannel:
 PlayTone:
   ;Tone in hl (max 1024)
   ;channel in c*%100000(max 3*%100000)
+  
+
   push af
   push bc
   push de
@@ -90,7 +92,6 @@ PlayTone:
     or d
     out ($7f),a
     ld a,%00000000 ;tune data
-    or c ; on channel...
     or e
     out ($7f),a
   pop de
@@ -266,7 +267,7 @@ PlayMusic2:
   ld (music2_tone_duration),a
   
   ld c,%100000;channel in c*%100000(max 3*%100000)
-  
+
   ;test if tone==0
   ld a,h
   cp $00
@@ -279,7 +280,7 @@ PlayMusic2:
   call CutOneChannel
   ret
  +:
-  ld a,%1000 ;volume
+  ld a,%1010 ;volume
   call EnableChannel
   call PlayTone
 

@@ -801,19 +801,19 @@ DoGameLogic:
     call PrintInt
     
     ;draw texts
-    ld a,(music1_tone_duration)
+    ld a,(music2_tone_duration)
     ld e,a;value (8bit) in e
     ld c,1 ;col (tiles) in c
     ld l,1 ;line (tiles) in l
     call PrintInt
     
     
-    ld hl,(music1_current_tone)
+    ld hl,(music2_current_tone)
     ld e,h;value (8bit) in e
     ld c,1 ;col (tiles) in c
     ld l,2 ;line (tiles) in l
     call PrintInt
-    ld hl,(music1_current_tone)
+    ld hl,(music2_current_tone)
     ld e,l;value (8bit) in e
     ld c,5 ;col (tiles) in c
     ld l,2 ;line (tiles) in l
