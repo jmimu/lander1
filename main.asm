@@ -61,10 +61,14 @@ rocket_fuel         dw
 current_level db
 goto_level db ;0 if no need to change level, n to enter level n
 ;music
-music_start_ptr         dw ;pointer
-music_current_ptr         dw ;pointer
-music_tone_duration         db ;when 0 got to next tone
-music_current_tone         dw ;value (for debug)
+music1_start_ptr         dw ;pointer
+music1_current_ptr         dw ;pointer
+music1_tone_duration         db ;when 0 got to next tone
+music1_current_tone         dw ;value (for debug)
+music2_start_ptr         dw ;pointer
+music2_current_ptr         dw ;pointer
+music2_tone_duration         db ;when 0 got to next tone
+music2_current_tone         dw ;value (for debug)
 .ends
 
 
@@ -129,9 +133,138 @@ main:
     ld hl,$FF0F
     ld (rocket_fuel),hl
 
+    ;music init
+    ld hl,Title_Music1_start;data1 start in hl
+    call InitMusic1
+    ld hl,Title_Music2_start;data2 start in hl
+    call InitMusic2
 
-    ld hl,Music1_start;data start in hl
-    call InitMusic
+
+;========================== TITLE ==============================
+    ;==============================================================
+    ; Clear VRAM
+    ;==============================================================
+    ; 1. Set VRAM write address to 0 by outputting $4000 ORed with $0000
+    ld a,$00
+    out ($bf),a
+    ld a,$40
+    out ($bf),a
+    ; 2. Output 16KB of zeroes
+    ld bc, $4000    ; Counter for 16KB of VRAM
+    -:
+        ld a,$00    ; Value to write
+        out ($be),a ; Output to VRAM address, which is auto-incremented after each write
+        dec bc
+        ld a,b
+        or c
+        jp nz,-
+
+    ;load palette of title
+    ;==============================================================
+    ; Load palette
+    ;==============================================================
+    ; 1. Set VRAM write address to CRAM (palette) address 0 (for palette index 0)
+    ; by outputting $c000 ORed with $0000
+    ld a,$00
+    out ($bf),a
+    ld a,$c0
+    out ($bf),a
+    ; 2. Output colour data
+    ld hl,Title_PaletteStart
+    ld b,(Title_PaletteEnd-Title_PaletteStart)
+    ld c,$be
+    otir
+
+    ;==============================================================
+    ; Load tiles
+    ;==============================================================
+    ; 1. Set VRAM write address to tile index 0
+    ; by outputting $4000 ORed with $0000
+    ld a,$00
+    out ($bf),a
+    ld a,$40
+    out ($bf),a
+    ; 2. Output tile data
+    ld hl,Title_TilesStart              ; Location of tile data
+    ld bc,Title_TilesEnd-Title_TilesStart  ; Counter for number of bytes to write
+    -:
+        ; Output data byte then three zeroes, because our tile data is 1 bit
+        ; and must be increased to 4 bit
+        ld a,(hl)        ; Get data byte
+        out ($be),a
+        inc hl           ; Add one to hl so it points to the next data byte
+        dec bc
+        ld a,b
+        or c
+        jp nz,-
+
+    ; Turn screen on
+    ld a,%11100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Enable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+    
+    ;==============================================================
+    ; Write tilemap data
+    ;==============================================================
+    ; 1. Set VRAM write address to name table index 0
+    ; by outputting $4000 ORed with $3800+0
+    ld a,$00
+    out ($bf),a
+    ld a,$38|$40
+    out ($bf),a
+    ; 2. Output tilemap data
+    ld hl,Title_TilemapStart
+    ld bc,Title_TilemapEnd-Title_TilemapStart  ; Counter for number of bytes to write
+    -:
+        ld a,(hl)    ; Get data byte
+        out ($be),a
+        inc hl       ; Point to next tile
+        dec bc
+        ld a,b
+        or c
+        jr nz,-  
+
+    ei;enable interruption (for vblank)
+TitleLoop:
+    call WaitForVBlank
+    call PSGMOD_Play
+    
+    ;check if button pressed
+    in a,($dc)
+    and %00010000
+    cp  %00000000
+    jr z,+
+        
+    jp TitleLoop
+               
++:    
+    
+    ; Turn screen off
+    ld a,%10100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Disable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+;======================== END TITLE ============================
+
+
+    ;music init
+    ld hl,Music1_start;data1 start in hl
+    call InitMusic1
+    ld hl,Music2_start;data2 start in hl
+    call InitMusic2
 
 
 game_start:
@@ -183,13 +316,13 @@ game_start:
     out ($bf),a
     ; 2. Output 16KB of zeroes
     ld bc, $4000    ; Counter for 16KB of VRAM
-    ClearVRAMLoop:
+    -:
         ld a,$00    ; Value to write
         out ($be),a ; Output to VRAM address, which is auto-incremented after each write
         dec bc
         ld a,b
         or c
-        jp nz,ClearVRAMLoop
+        jp nz,-
 
 
     ;load palette of current level
@@ -230,28 +363,16 @@ game_start:
     ; 2. Output tile data
     ld hl,TilesStart              ; Location of tile data
     ld bc,TilesEnd-TilesStart  ; Counter for number of bytes to write
-    WriteTilesLoop:
+    -:
         ; Output data byte then three zeroes, because our tile data is 1 bit
         ; and must be increased to 4 bit
         ld a,(hl)        ; Get data byte
         out ($be),a
         inc hl           ; Add one to hl so it points to the next data byte
         dec bc
-        ;soit on fait ca:
         ld a,b
         or c
-        jp nz,WriteTilesLoop
-        ;soit on fait ca
-        ;ld a,b
-        ;cp $00
-        ;jr nz,WriteTilesLoop
-        ;ld a,c
-        ;cp $00
-        ;jr nz,WriteTilesLoop
-        ;le premier va plus vite!
-        
-
-
+        jp nz,-
 
     
     ; Turn screen on
@@ -437,11 +558,14 @@ ReadButtons:
 ret
  
 OnButton1:
-ret
+    ret
 OnButton2:
-ret
+    ld a,(current_level)
+    inc a
+    ld (goto_level),a
+    ret
 OnButtonUp:
-ret
+    ret
 OnButtonDown:
     push af
     push bc
@@ -614,13 +738,14 @@ PSGMOD_Play:
     ;~ 
     
     ;play harmonics or not depending on level number
-    ld a,(current_level)
-    and %00000001
-    jr z,+
-    call PlayMusicH
-    ret
-    +:
-    call PlayMusic
+    ;ld a,(current_level)
+    ;and %00000001
+    ;jr z,+
+    ;call PlayMusicH
+    ;ret
+    ;+:
+    call PlayMusic1
+    call PlayMusic2
 
     ret
     
@@ -676,19 +801,19 @@ DoGameLogic:
     call PrintInt
     
     ;draw texts
-    ld a,(music_tone_duration)
+    ld a,(music1_tone_duration)
     ld e,a;value (8bit) in e
     ld c,1 ;col (tiles) in c
     ld l,1 ;line (tiles) in l
     call PrintInt
     
     
-    ld hl,(music_current_tone)
+    ld hl,(music1_current_tone)
     ld e,h;value (8bit) in e
     ld c,1 ;col (tiles) in c
     ld l,2 ;line (tiles) in l
     call PrintInt
-    ld hl,(music_current_tone)
+    ld hl,(music1_current_tone)
     ld e,l;value (8bit) in e
     ld c,5 ;col (tiles) in c
     ld l,2 ;line (tiles) in l
@@ -845,6 +970,7 @@ TestCollision:;TODO: using only level1 data!
 ;==============================================================
 
 .include "data.inc"
+.include "title.inc"
 
 
 

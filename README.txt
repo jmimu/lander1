@@ -20,8 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ////////////////////////////////////////////////////////////////////////
 
-My first SMS game!
-From 2013-02-26 to 2013-03-??
+First try to make an SMS game.
 
 I found useful information to start asm SMS developpement on these pages:
  - Maxim's step-by-step introduction: http://www.smspower.org/maxim/HowToProgram/
@@ -30,6 +29,7 @@ I found useful information to start asm SMS developpement on these pages:
  - Heliophobe's simple sprite demo: http://www.smspower.org/Homebrew/SimpleSpriteDemo-SMS
  - 16x16 sprites in Blockhead homebrew: http://www.smspower.org/Homebrew/Blockhead-SMS
  - mk3man.pdf
+ - Maxim's bmp2tile for title screen
 
 ////////////////////////////////////////////////////////////////////////
 
