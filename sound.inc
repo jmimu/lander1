@@ -200,7 +200,7 @@ PlayMusic1:
 
   ld a,l
   cp $00
-  jr nz,+;(music1_current_ptr+1) != $ff, not end of track
+  jr nz,+;(music1_current_ptr+1) != 0, not pause
   ;this is a pause, so cut sound
   call CutOneChannel
   ret
@@ -275,7 +275,7 @@ PlayMusic2:
 
   ld a,l
   cp $00
-  jr nz,+;(music2_current_ptr+1) != $ff, not end of track
+  jr nz,+;(music2_current_ptr+1) != 0, not pause
   ;this is a pause, so cut sound
   call CutOneChannel
   ret

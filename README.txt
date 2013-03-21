@@ -1,6 +1,6 @@
 Lander1
 
-Copyright (C) 2013  JM Muller
+Copyright (C) 2013  jmimu (jmimu@free.fr)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,8 +34,20 @@ I found useful information to start asm SMS developpement on these pages:
 ////////////////////////////////////////////////////////////////////////
 
 List of files:
- - test1.tsp:
- - ts2sms.tsd:
- 
-The font tiles come form Maxim example.
+ - test1.tsp: my Tile Studio project, containing tiles dans tilemaps
+ - ts2sms.tsd: Dave's Tile Studio definition file, to convert a tsp file into asm definitions
+ - tones.ods : list of SMS values for tones
+ - License.txt : GPL license
+ - README.txt : this file
+ - makefile, linkfile : to compile using make utility
+ - main.asm : main source
+ - data.inc : graphics and levels in-game
+ - init.inc : initialization data
+ - sound.inc : sound functions and music
+ - sprites.inc : sprites functions
+ - text.inc : text functions
+ - title.inc : title data
+
+
+The font tiles come from Maxim example.
 

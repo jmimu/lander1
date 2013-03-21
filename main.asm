@@ -241,9 +241,26 @@ TitleLoop:
     and %00010000
     cp  %00000000
     jr z,+
-        
-    jp TitleLoop
-               
+
+    ;check if end of music
+    ld hl,(music1_current_ptr)
+    ld b,h
+    ld c,l;(music1_current_ptr) is in bc
+    ld hl,Title_Music1_end
+    dec hl
+    dec hl
+    dec hl
+    dec hl
+    dec hl
+    dec hl
+
+    ld a,h
+    cp b
+    jp nz,TitleLoop
+    ld a,l
+    cp c
+    jp nz,TitleLoop
+                 
 +:    
     
     ; Turn screen off
