@@ -18,6 +18,17 @@ TextCongratStart:
 .db "CONGRATULATIONS, YOU FINISHED THE GAME!  FINAL SCORE: "
 TextCongratEnd:
 
+TextNoWarnStart:
+.db "                 "
+TextNoWarnEnd:
+
+TextWarnXStart:
+.db "HZ TOO FAST!"
+TextWarnXEnd:
+
+TextWarnYStart:
+.db "FALLING TOO FAST!"
+TextWarnYEnd:
 
 TilesStart:
 

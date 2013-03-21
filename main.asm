@@ -510,6 +510,7 @@ MainLoop:
     or a
     jr z,+
       ;we have to change the level
+      call WaitForButton
       ld (current_level),a
       jp game_start
     +:
@@ -836,7 +837,8 @@ DoGameLogic:
     ld l,2 ;line (tiles) in l
     call PrintInt
     
-    call TestCollision
+    call drawWarning
+    call TestAllCollisions
         
     pop hl
     pop de
@@ -845,12 +847,59 @@ DoGameLogic:
 
     ret
 
-TestCollision:;TODO: using only level1 data!
+;check if speed is too big, write a warning
+drawWarning:
     push af
     push bc
     push hl
-    
-      ;tests if point posX+8,posY+24 is on a full tile
+
+        ;clear text
+        ld bc,TextNoWarnEnd-TextNoWarnStart
+        ld b,c;text length in b
+        ld c,4;col (tiles) in c
+        ld l,1;line (tiles) in l
+        ld de,TextNoWarnStart;text pointer in de
+        call PrintText
+
+      ld hl,(speedX)  
+      ;ld bc,speedX_tolerance
+      ;add hl,bc ;hl must be < speedX_tolerance*2
+      ld bc,$80
+      add hl,bc ;h must be < 1
+      ld a,0
+      cp h
+      jr z,+
+        ;draw text
+        ld bc,TextWarnXEnd-TextWarnXStart
+        ld b,c;text length in b
+        ld c,4;col (tiles) in c
+        ld l,1;line (tiles) in l
+        ld de,TextWarnXStart;text pointer in de
+        call PrintText
+     +:
+      ;in y: TODO : use speedY_tolerance
+      ld hl,(speedY)  
+      ld bc,$80
+      add hl,bc ;h must be < 1
+      ld a,0
+      cp h
+      jr z,+
+        ;draw text
+        ld bc,TextWarnYEnd-TextWarnYStart
+        ld b,c;text length in b
+        ld c,4;col (tiles) in c
+        ld l,1;line (tiles) in l
+        ld de,TextWarnYStart;text pointer in de
+        call PrintText
+     +:
+    pop hl
+    pop bc
+    pop af
+    ret
+
+
+TestAllCollisions:
+      ;tests if point posX+8,posY is on a full tile
       ld bc,(posX)    
       ld h,b
       srl h
@@ -858,17 +907,29 @@ TestCollision:;TODO: using only level1 data!
       srl h
       inc h ;add 8 pix!
       ;x in h (in tiles)
-      
       ld bc,(posY)    
       ld l,b
       srl l
       srl l
       srl l
+      ;y in l (in tiles)
+      call TestCollision
+      
+      ;tests if point posX+8,posY+24 is on a full tile
+      ;optimization: update only l
       inc l;add 24 pix!
       inc l
       inc l
-      ;y in l (in tiles)
-      
+      call TestCollision
+    ret
+
+;x in h (in tiles)
+;y in l (in tiles)
+TestCollision:;TODO: using only level1 data!
+    push af
+    push bc
+    push hl
+    
       ;compute tile number
       ld b,0
       ld c,h;x in bc
@@ -947,7 +1008,6 @@ TestCollision:;TODO: using only level1 data!
       ld l,10;line (tiles) in l
       ld de,TextWonStart;text pointer in de
       call PrintText
-      call WaitForButton
       
       jp end_TestCollision
       
@@ -971,9 +1031,6 @@ TestCollision:;TODO: using only level1 data!
         ld l,15;line (tiles) in l
         ld de,TextLostStart;text pointer in de
         call PrintText
-        
-        call WaitForButton
-        
         
     end_TestCollision:
     pop hl

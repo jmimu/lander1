@@ -87,6 +87,8 @@ PrintText:
     
     push af
     push bc
+    push de
+    push bc
     
     ;compute the tile index in tilemap
     ;sms screen is 32*28 tiles large
@@ -125,6 +127,8 @@ PrintText:
             
       dec b
       jr nz,-
+    pop de
+    pop bc
     pop af
         
     ret
