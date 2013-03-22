@@ -63,6 +63,7 @@ current_level db
 already_lost db ;0 if not, 1 if lost at least 1 time
 goto_level db ;0 if no need to change level, n to enter level n
 star_color dw ;color used: bright and yellow
+PauseFlag db ;1 if pause
 ;music
 music1_start_ptr         dw ;pointer
 music1_current_ptr         dw ;pointer
@@ -108,8 +109,12 @@ music2_current_tone         dw ;value (for debug)
 ;==============================================================
 ; Pause button handler
 ;==============================================================
-    ; Do nothing
-    retn
+    call CutAllSound
+    
+    ld a,(PauseFlag) ;taken from Heliophobe's SMS Tetris 
+    xor $1  ;Just a quick toggle
+    ld (PauseFlag),a
+  retn
 
 
 ;inclusions
@@ -124,6 +129,9 @@ music2_current_tone         dw ;value (for debug)
 ;==============================================================
 main:
     ld sp, $dff0 ;where stack ends ;$dff0
+    
+    ld a,0
+    ld (PauseFlag),a
 
     ;==============================================================
     ; Set up VDP registers
@@ -520,6 +528,11 @@ game_start:
     
 
 MainLoop:
+
+    ld a,(PauseFlag)
+    cp 1
+    jr z,MainLoop ;if pause do nothing in main loop
+    
     ;cut noise channel sound
     ld c,%01100000;channel in c*%100000(max 3*%100000)
     call CutOneChannel
