@@ -60,6 +60,7 @@ posY                     dw ; multiplied by 2^8
 number_of_sprites     db ; number of sprites to draw this frame
 rocket_fuel         dw 
 current_level db
+already_lost db ;0 if not, 1 if lost at least 1 time
 goto_level db ;0 if no need to change level, n to enter level n
 star_color dw ;color used: bright and yellow
 ;music
@@ -282,6 +283,8 @@ TitleLoop:
     ;game init
     ld a,1
     ld (current_level),a
+    
+
 
     ld hl,$FF0F
     ld (rocket_fuel),hl
@@ -296,9 +299,8 @@ game_start:
     ld a,(current_level)
     dec a
     cp number_of_levels
-    jr nz,+
-    ld a,1;restart the game!
-    ld (current_level),a
+    jr nz,end_endgame_message
+
     
     ;draw congratulations text
     ld bc,TextCongratEnd-TextCongratStart
@@ -308,22 +310,39 @@ game_start:
     ld de,TextCongratStart;text pointer in de
     call PrintText    
     
-    ;draw level number text
+    ;draw final fuel
     ld hl,(rocket_fuel)
     ld c,24;col (tiles) in c
     ld l,7;line (tiles) in l
     ld e,h;value (8bit) in e
     call PrintInt
-        
-    call WaitForButton
+    
+    ld a,1
+    ld (current_level),a
+    
+    ld a,(already_lost)
+    cp 0
+    jr z,+
+    ;game finished, but not perfect
+    ld bc,TextNotPerfectEnd-TextNotPerfectStart
+    ld b,c;text length in b
+    ld c,0;col (tiles) in c
+    ld l,12;line (tiles) in l
+    ld de,TextNotPerfectStart;text pointer in de
+    call PrintText 
   +:
-  
+    
+    call WaitForButton
+   end_endgame_message:
+
     ;if first level, fill fuel
     ld a,(current_level)
     cp 1
     jr nz,+
     ld hl,$FF0F
     ld (rocket_fuel),hl
+    ld a,0
+    ld (already_lost),a
   +:
   
   
@@ -413,22 +432,22 @@ game_start:
     ;draw hello text
     ld bc,TextHelloEnd-TextHelloStart
     ld b,c;text length in b
-    ld c,5;col (tiles) in c
-    ld l,10;line (tiles) in l
+    ld c,0;col (tiles) in c
+    ld l,3;line (tiles) in l
     ld de,TextHelloStart;text pointer in de
     call PrintText
     
     ;draw level text
     ld bc,TextLevelEnd-TextLevelStart
     ld b,c;text length in b
-    ld c,8;col (tiles) in c
-    ld l,12;line (tiles) in l
+    ld c,0;col (tiles) in c
+    ld l,8;line (tiles) in l
     ld de,TextLevelStart;text pointer in de
     call PrintText
     
     ;draw level number text
-    ld c,25;col (tiles) in c
-    ld l,12;line (tiles) in l
+    ld c,18;col (tiles) in c
+    ld l,8;line (tiles) in l
     ld a,(current_level)
     ld e,a;value (8bit) in e
     call PrintInt
@@ -514,28 +533,49 @@ MainLoop:
     ;check if level finished
     ld a,(goto_level)
     or a
-    jr z,+
+    jp z,MainLoop
       ;we have to change the level
+      ld c,a
       call WaitForButton
+      ;if just lost and pushed button 2, restart game
+      ld a,b;get pushed button
+      cp 2 ;if not button 2, replay level
+      jr nz,+
+      ;also check if fuel max (=you just lost)
+      ld hl,(rocket_fuel)
+      ld a,h
+      cp $FF
+      jr nz,+
+      ld c,1;restart game to level 1
+     +:
+      ld a,c
       ld (current_level),a
       jp game_start
-    +:
     
     
     jp MainLoop
     
 
 WaitForButton:
+    ;out: b for button (1 or 2)
     call CutAllSound
     push af
       -:in a,($dc)
-        and %00010000
-        cp  %00000000
-        jr nz,-
+        and %00110000 ;is button 1?
+        ld b,1
+        cp  %00100000
+        jr z,+
+        in a,($dc)
+        ld b,2
+        and %00110000 ;is button 2?
+        cp  %00010000
+        jr z,+
+        jr -
+      +:
         ; Button down, wait for it to go up
       -:in a,($dc)
-        and %00010000
-        cp  %00010000
+        and %00110000
+        cp  %00110000
         jr nz,-
     pop af
     ret
@@ -584,9 +624,6 @@ ret
 OnButton1:
     ret
 OnButton2:
-    ld a,(current_level)
-    inc a
-    ld (goto_level),a
     ret
 OnButtonUp:
     ret
@@ -779,7 +816,7 @@ UpdatePalette:
    push hl
     ;update star color
     ld hl,(star_color)
-    ld bc,$10 ;color change speed
+    ld bc,$100 ;color change speed
     add hl,bc
     ld (star_color),hl
     ;==============================================================
@@ -794,9 +831,23 @@ UpdatePalette:
     ; 2. Output colour data
     ld hl,(star_color)
     ld a,h
-    and %00110000 ;use only bright colors (let only blue byte change
+    and %00110000 ;use only bright colors (let only blue byte change)
     or  %00001111 ; R and G are at max
     out ($be),a
+    
+    ;update fire color 2
+    ld a,$1C
+    out ($bf),a
+    ld a,$c0
+    out ($bf),a
+    ; 2. Output colour data
+    ld hl,(star_color)
+    ld a,h
+    and %00110101 ;use only bright colors (let only blue byte change)
+    or  %00001010 ; R and G are at max
+    out ($be),a
+    
+    
    pop hl
    pop bc
    pop af    
@@ -997,7 +1048,7 @@ TestCollision:;TODO: using only level1 data!
       ld b,a
       ld a,(hl)
       cp b
-      jr c,end_TestCollision
+      jp c,end_TestCollision
       ;it's not and emprty tile... check if it is a landing zone
       ld b,landing_tile_number
       cp b
@@ -1007,7 +1058,7 @@ TestCollision:;TODO: using only level1 data!
       ld b,a
       ld a, last_full_tile
       cp b
-      jr c,end_TestCollision
+      jp c,end_TestCollision
       jr destroy
       
    try_to_land:   
@@ -1047,14 +1098,23 @@ TestCollision:;TODO: using only level1 data!
       ;draw text
       ld bc,TextWonEnd-TextWonStart
       ld b,c;text length in b
-      ld c,5;col (tiles) in c
-      ld l,10;line (tiles) in l
+      ld c,0;col (tiles) in c
+      ld l,12;line (tiles) in l
       ld de,TextWonStart;text pointer in de
       call PrintText
       
       jp end_TestCollision
       
     destroy:
+        ;return to correct yellow
+        ld a,$1C
+        out ($bf),a
+        ld a,$c0
+        out ($bf),a
+        ; 2. Output colour data
+        ld a,$0f
+        out ($be),a
+    
         ;show explosion
         ld bc,(posX)    
         ld h,b;x in h
@@ -1064,14 +1124,21 @@ TestCollision:;TODO: using only level1 data!
         ld e,$0;sprite index in e, 0 because we replace the rocket
         call SpriteSet16x24
       
-        ;ld a,(current_level)
-        ld a,1 ;return to first level
+        ld a,(current_level)
+        ;ld a,1 ;return to first level
         ld (goto_level),a
+        
+        ;refill!
+        ld hl,$FF0F
+        ld (rocket_fuel),hl
+        ld a,1
+        ld (already_lost),a
+        
         ;draw text
         ld bc,TextLostEnd-TextLostStart
         ld b,c;text length in b
-        ld c,5;col (tiles) in c
-        ld l,15;line (tiles) in l
+        ld c,0;col (tiles) in c
+        ld l,12;line (tiles) in l
         ld de,TextLostStart;text pointer in de
         call PrintText
         
