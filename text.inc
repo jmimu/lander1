@@ -21,7 +21,9 @@ PrintInt: ;print an int in octal...
     ; the constant "digits_tile_number" must represent the number of the "0" tile in VRAM
     
     push af
-    push bc    
+    push bc
+    push de
+    push hl
     
     ;compute the tile index in tilemap
     ;sms screen is 32*28 tiles large
@@ -68,6 +70,8 @@ PrintInt: ;print an int in octal...
         dec c
         jr nz,-
         
+    pop hl
+    pop de
     pop bc
     pop af
         
@@ -88,6 +92,7 @@ PrintText:
     push af
     push bc
     push de
+    push hl
     push bc
     
     ;compute the tile index in tilemap
@@ -127,6 +132,7 @@ PrintText:
             
       dec b
       jr nz,-
+    pop hl
     pop de
     pop bc
     pop af

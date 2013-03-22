@@ -29,21 +29,22 @@
 ; constants
 ;==============================================================
 ;tiles
-.define number_of_empty_tiles 13;tile 13 and make collisions
-.define digits_tile_number $48
+.define number_of_empty_tiles 13;tile 13 and more make collisions
+.define last_full_tile 34;tile 35 and more make no collisions
+.define digits_tile_number $49
 .define fire_tile_number $23
 .define explosion_tile_number $28
 .define fuel_tile_number $26
 .define rocket_tile_number $2E
 .define landing_tile_number $27
 .define guy_tile_number $34
-.define diff_tile_ascii $18 ;difference between index in tiles and in ascii
+.define diff_tile_ascii $19 ;difference between index in tiles and in ascii
 ;game
-.define fuel_use $-80
+.define fuel_use $-70 ;$-80
 .define speedX_tolerance $40 ;must be < $80 !
 .define speedY_tolerance $40
 .define level_mem_size 1824 ;size of 1 palette + 1 tilemap
-.define number_of_levels 4 ;
+.define number_of_levels 5 ;
 
 
 
@@ -60,6 +61,7 @@ number_of_sprites     db ; number of sprites to draw this frame
 rocket_fuel         dw 
 current_level db
 goto_level db ;0 if no need to change level, n to enter level n
+star_color dw ;color used: bright and yellow
 ;music
 music1_start_ptr         dw ;pointer
 music1_current_ptr         dw ;pointer
@@ -126,12 +128,6 @@ main:
     ; Set up VDP registers
     ;==============================================================
     call initVDP
-
-    ld a,1
-    ld (current_level),a
-
-    ld hl,$FF0F
-    ld (rocket_fuel),hl
 
     ;music init
     ld hl,Title_Music1_start;data1 start in hl
@@ -283,6 +279,15 @@ TitleLoop:
     ld hl,Music2_start;data2 start in hl
     call InitMusic2
 
+    ;game init
+    ld a,1
+    ld (current_level),a
+
+    ld hl,$FF0F
+    ld (rocket_fuel),hl
+    
+    ld hl,$0000
+    ld (star_color),hl
 
 game_start:
     call CutAllSound
@@ -502,6 +507,7 @@ MainLoop:
 
     call DoGameLogic
     call WaitForVBlank
+    call UpdatePalette
     call UpdateScreen
     call PSGMOD_Play
     
@@ -767,8 +773,38 @@ PSGMOD_Play:
 
     ret
     
+UpdatePalette:
+   push af
+   push bc
+   push hl
+    ;update star color
+    ld hl,(star_color)
+    ld bc,$10 ;color change speed
+    add hl,bc
+    ld (star_color),hl
+    ;==============================================================
+    ; Update palette
+    ;==============================================================
+    ; 1. Set VRAM write address to CRAM (palette) address 0 (for palette index 0)
+    ; by outputting $c000 ORed with $000F (number of the color to change)
+    ld a,$0F
+    out ($bf),a
+    ld a,$c0
+    out ($bf),a
+    ; 2. Output colour data
+    ld hl,(star_color)
+    ld a,h
+    and %00110000 ;use only bright colors (let only blue byte change
+    or  %00001111 ; R and G are at max
+    out ($be),a
+   pop hl
+   pop bc
+   pop af    
+   ret 
+
 UpdateScreen:
-    ret 
+    ret
+
 
 DoGameLogic:
     push af
@@ -818,24 +854,22 @@ DoGameLogic:
     ld l,0 ;line (tiles) in l
     call PrintInt
     
-    ;draw texts
-    ld a,(music2_tone_duration)
-    ld e,a;value (8bit) in e
-    ld c,1 ;col (tiles) in c
-    ld l,1 ;line (tiles) in l
-    call PrintInt
-    
-    
-    ld hl,(music2_current_tone)
-    ld e,h;value (8bit) in e
-    ld c,1 ;col (tiles) in c
-    ld l,2 ;line (tiles) in l
-    call PrintInt
-    ld hl,(music2_current_tone)
-    ld e,l;value (8bit) in e
-    ld c,5 ;col (tiles) in c
-    ld l,2 ;line (tiles) in l
-    call PrintInt
+    ;;draw texts
+    ;ld a,(music2_tone_duration)
+    ;ld e,a;value (8bit) in e
+    ;ld c,1 ;col (tiles) in c
+    ;ld l,1 ;line (tiles) in l
+    ;call PrintInt
+    ;ld hl,(music2_current_tone)
+    ;ld e,h;value (8bit) in e
+    ;ld c,1 ;col (tiles) in c
+    ;ld l,2 ;line (tiles) in l
+    ;call PrintInt
+    ;ld hl,(music2_current_tone)
+    ;ld e,l;value (8bit) in e
+    ;ld c,5 ;col (tiles) in c
+    ;ld l,2 ;line (tiles) in l
+    ;call PrintInt
     
     call drawWarning
     call TestAllCollisions
@@ -964,10 +998,19 @@ TestCollision:;TODO: using only level1 data!
       ld a,(hl)
       cp b
       jr c,end_TestCollision
-      ;it's a land tile... check if it is a correct zone
+      ;it's not and emprty tile... check if it is a landing zone
       ld b,landing_tile_number
       cp b
-      jr nz,destroy
+      jr z,try_to_land
+      ;check if it is a full tile
+      ld a,(hl)
+      ld b,a
+      ld a, last_full_tile
+      cp b
+      jr c,end_TestCollision
+      jr destroy
+      
+   try_to_land:   
       ;good place, now check speeds
       ;in x: TODO : use speedX_tolerance
       ld hl,(speedX)  
