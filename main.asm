@@ -1,3 +1,22 @@
+;Lander1
+;
+;Copyright (C) 2013  jmimu (jmimu@free.fr)
+;
+;This program is free software: you can redistribute it and/or modify
+;it under the terms of the GNU General Public License as published by
+;the Free Software Foundation, either version 3 of the License, or
+;(at your option) any later version.
+;
+;This program is distributed in the hope that it will be useful,
+;but WITHOUT ANY WARRANTY; without even the implied warranty of
+;MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;GNU General Public License for more details.
+;
+;You should have received a copy of the GNU General Public License
+;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;==============================================================
+
+
 ;==============================================================
 ; WLA-DX banking setup
 ; Note that this is a frame 2-only setup, allowing large data
@@ -283,9 +302,14 @@ TitleLoop:
 
 
     ;music init
-    ld hl,Music1_start;data1 start in hl
+    ;ld hl,Music1_start;data1 start in hl
+    ;call InitMusic1
+    ;ld hl,Music2_start;data2 start in hl
+    ;call InitMusic2
+    
+    ld hl,brahms1_start
     call InitMusic1
-    ld hl,Music2_start;data2 start in hl
+    ld hl,brahms2_start
     call InitMusic2
 
     ;game init
@@ -353,8 +377,20 @@ game_start:
     ld (already_lost),a
   +:
   
-  
-
+    ;disable interrupts and turn off screen before writing to it. Will it fix tiles issues?
+    di  ; disable interrupts
+    ; Turn screen off
+    ld a,%10100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Disable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+    
     ;==============================================================
     ; Clear VRAM
     ;==============================================================
@@ -436,6 +472,7 @@ game_start:
     ld a,$81
     out ($bf),a
 
+    ei  ; enable interrupts
 
     ;draw hello text
     ld bc,TextHelloEnd-TextHelloStart

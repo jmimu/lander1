@@ -36,7 +36,8 @@ I found useful information to start asm SMS developpement on these pages:
 List of files:
  - test1.tsp: my Tile Studio project, containing tiles dans tilemaps
  - ts2sms.tsd: Dave's Tile Studio definition file, to convert a tsp file into asm definitions
- - tones.ods : list of SMS values for tones
+ - music/tones.ods : list of SMS values for tones
+ - music/music2sms.py : script to transform a simple form of music into sms asm
  - License.txt : GPL license
  - README.txt : this file
  - makefile, linkfile : to compile using make utility
