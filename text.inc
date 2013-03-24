@@ -30,9 +30,10 @@ PrintInt: ;print an int in octal...
     call Multby32 ;multipy l by 32, result in hl
     ld b,0
     add hl,bc
-    ;hl*2 is the number of the tile
     ld bc,2
     add hl,bc ;begin to write the least siginificant digit
+    add hl,hl ;2 bytes by tile
+    ;hl is the number of the byte in tilemap
     
     
     ;write digits
@@ -44,12 +45,10 @@ PrintInt: ;print an int in octal...
         ; 1. Set VRAM write address to name table index 0
         ; by outputting $4000 ORed with $3800+hl*2
         ld a,$00
-        add a,l ;number of tile: hl*2
-        add a,l ;number of tile: hl*2
+        add a,l ;number of byte: hl
         out ($bf),a
         ld a,$38|$40
-        add a,h ;number of tile: hl*2
-        add a,h ;number of tile: hl*2
+        add a,h ;number of byte: hl
         out ($bf),a
         
         ; 2. Output tilemap data   
@@ -66,6 +65,7 @@ PrintInt: ;print an int in octal...
         srl e
         ;ld e,a
         
+        dec hl ; wel'll draw next tile (go left)
         dec hl ; wel'll draw next tile (go left)
         dec c
         jr nz,-
@@ -100,9 +100,10 @@ PrintText:
     call Multby32 ;multipy l by 32, result in hl
     ld b,0
     add hl,bc
-    ;hl*2 is the number of the tile
-    ld bc,2
-    add hl,bc ;begin to write the least siginificant digit
+    ;hl is the number of the tile
+    
+    add hl,hl ;2 bytes by tile
+    ;hl is the number of the byte in tilemap
     
     pop bc
     ;write chars
@@ -113,12 +114,10 @@ PrintText:
       ; 1. Set VRAM write address to name table index 0
       ; by outputting $4000 ORed with $3800+hl*2
       ld a,$00
-      add a,l ;number of tile: hl*2
-      add a,l ;number of tile: hl*2
+      add a,l ;number of byte: hl
       out ($bf),a
       ld a,$38|$40
-      add a,h ;number of tile: hl*2
-      add a,h ;number of tile: hl*2
+      add a,h ;number of byte: hl
       out ($bf),a
       
       ; 2. Output tilemap data   
@@ -128,6 +127,7 @@ PrintText:
       ld a,0 ;one zero
       out ($be),a
       inc de;move pointer in data
+      inc hl;move pointer on screen
       inc hl;move pointer on screen
             
       dec b

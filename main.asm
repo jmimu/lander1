@@ -337,15 +337,15 @@ game_start:
     ;draw congratulations text
     ld bc,TextCongratEnd-TextCongratStart
     ld b,c;text length in b
-    ld c,0;col (tiles) in c
-    ld l,6;line (tiles) in l
+    ld c,2;col (tiles) in c
+    ld l,5;line (tiles) in l
     ld de,TextCongratStart;text pointer in de
     call PrintText    
     
     ;draw final fuel
     ld hl,(rocket_fuel)
     ld c,24;col (tiles) in c
-    ld l,7;line (tiles) in l
+    ld l,6;line (tiles) in l
     ld e,h;value (8bit) in e
     call PrintInt
     
@@ -358,8 +358,8 @@ game_start:
     ;game finished, but not perfect
     ld bc,TextNotPerfectEnd-TextNotPerfectStart
     ld b,c;text length in b
-    ld c,0;col (tiles) in c
-    ld l,12;line (tiles) in l
+    ld c,2;col (tiles) in c
+    ld l,7;line (tiles) in l
     ld de,TextNotPerfectStart;text pointer in de
     call PrintText 
   +:
@@ -477,22 +477,22 @@ game_start:
     ;draw hello text
     ld bc,TextHelloEnd-TextHelloStart
     ld b,c;text length in b
-    ld c,0;col (tiles) in c
-    ld l,3;line (tiles) in l
+    ld c,2;col (tiles) in c
+    ld l,6;line (tiles) in l
     ld de,TextHelloStart;text pointer in de
     call PrintText
     
     ;draw level text
     ld bc,TextLevelEnd-TextLevelStart
     ld b,c;text length in b
-    ld c,0;col (tiles) in c
-    ld l,8;line (tiles) in l
+    ld c,7;col (tiles) in c
+    ld l,10;line (tiles) in l
     ld de,TextLevelStart;text pointer in de
     call PrintText
     
     ;draw level number text
-    ld c,18;col (tiles) in c
-    ld l,8;line (tiles) in l
+    ld c,22;col (tiles) in c
+    ld l,10;line (tiles) in l
     ld a,(current_level)
     ld e,a;value (8bit) in e
     call PrintInt
@@ -1148,8 +1148,8 @@ TestCollision:;TODO: using only level1 data!
       ;draw text
       ld bc,TextWonEnd-TextWonStart
       ld b,c;text length in b
-      ld c,0;col (tiles) in c
-      ld l,12;line (tiles) in l
+      ld c,2;col (tiles) in c
+      ld l,3;line (tiles) in l
       ld de,TextWonStart;text pointer in de
       call PrintText
       
@@ -1187,8 +1187,8 @@ TestCollision:;TODO: using only level1 data!
         ;draw text
         ld bc,TextLostEnd-TextLostStart
         ld b,c;text length in b
-        ld c,0;col (tiles) in c
-        ld l,12;line (tiles) in l
+        ld c,2;col (tiles) in c
+        ld l,3;line (tiles) in l
         ld de,TextLostStart;text pointer in de
         call PrintText
         
