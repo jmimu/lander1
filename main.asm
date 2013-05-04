@@ -98,7 +98,7 @@ music2_current_tone         dw ;value (for debug)
 ;==============================================================
 ; SDSC tag and SMS rom header
 ;==============================================================
-.sdsctag 1.2,"Lander","SMS programming tutorial program","jmimu"
+.sdsctag 1.2,"Lander v1.0","Simple lander game","jmimu"
 
 .bank 0 slot 0
 .org $0000
@@ -340,7 +340,7 @@ game_start:
     ld c,2;col (tiles) in c
     ld l,5;line (tiles) in l
     ld de,TextCongratStart;text pointer in de
-    call PrintText    
+    call PrintTextStatic
     
     ;draw final fuel
     ld hl,(rocket_fuel)
@@ -361,7 +361,7 @@ game_start:
     ld c,2;col (tiles) in c
     ld l,7;line (tiles) in l
     ld de,TextNotPerfectStart;text pointer in de
-    call PrintText 
+    call PrintTextStatic
   +:
     
     call WaitForButton
@@ -459,21 +459,7 @@ game_start:
         or c
         jp nz,-
 
-    
-    ; Turn screen on
-    ld a,%11100000
-;          |||| |`- Zoomed sprites -> 16x16 pixels
-;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
-;          |||`---- 30 row/240 line mode
-;          ||`----- 28 row/224 line mode
-;          |`------ VBlank interrupts
-;          `------- Enable display
-    out ($bf),a
-    ld a,$81
-    out ($bf),a
-
-    ei  ; enable interrupts
-
+    ;draw texts befor turning on screen to avoid problems
     ;draw hello text
     ld bc,TextHelloEnd-TextHelloStart
     ld b,c;text length in b
@@ -488,6 +474,7 @@ game_start:
     ld c,7;col (tiles) in c
     ld l,10;line (tiles) in l
     ld de,TextLevelStart;text pointer in de
+    ld a,1;have to write slowly
     call PrintText
     
     ;draw level number text
@@ -497,6 +484,19 @@ game_start:
     ld e,a;value (8bit) in e
     call PrintInt
     
+    ; Turn screen on
+    ld a,%11100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Enable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+
+    ei  ; enable interrupts
     
     call WaitForButton
 
@@ -916,8 +916,6 @@ DoGameLogic:
   
     ld a,$06 ; at least 6 sprites to show (rocket)
     ld (number_of_sprites),a
-    ld c,$03 ; 3 may have to be hided
-    call HideSprites
     
     ;mechanics
     ;increment Y-speed (gravity)
@@ -938,6 +936,11 @@ DoGameLogic:
     ld (posY),hl
     
     call ReadButtons ;updates number_of_sprites
+    ;hide other sprites
+    ld a,(number_of_sprites)
+    ld c,$01 ; hide only next sprite, the following will be hidden too
+    call HideSprites
+
     
     ;draw rocket sprites
     ld bc,(posX)    
@@ -1151,7 +1154,7 @@ TestCollision:;TODO: using only level1 data!
       ld c,2;col (tiles) in c
       ld l,3;line (tiles) in l
       ld de,TextWonStart;text pointer in de
-      call PrintText
+      call PrintTextStatic
       
       jp end_TestCollision
       
@@ -1190,7 +1193,7 @@ TestCollision:;TODO: using only level1 data!
         ld c,2;col (tiles) in c
         ld l,3;line (tiles) in l
         ld de,TextLostStart;text pointer in de
-        call PrintText
+        call PrintTextStatic
         
     end_TestCollision:
     pop hl

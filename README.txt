@@ -1,4 +1,4 @@
-Lander1
+Lander1 v1.1
 
 Copyright (C) 2013  jmimu (jmimu@free.fr)
 
@@ -31,6 +31,10 @@ I found useful information to start asm SMS developpement on these pages:
  - mk3man.pdf
  - Maxim's bmp2tile for title screen
 
+The font tiles come from Maxim example.
+
+In-game music comes from J. Brahms...
+
 ////////////////////////////////////////////////////////////////////////
 
 List of files:
@@ -49,6 +53,4 @@ List of files:
  - text.inc : text functions
  - title.inc : title data
 
-
-The font tiles come from Maxim example.
 

@@ -1,5 +1,10 @@
 #! /usr/bin/python
 
+#todo: add attack and end (remove their duration), declare instrument [0.2, 0.7, 1] [0.5]
+#vibrato: ~3/2 (freq 3, amplitude 2)
+#link: >5 (continuous freq in 5 frames)
+#fast notation : abcd (same octave, same len)
+
 tempo=100
 fps=60
 durations={"q":3,"t":4,"h":6,"1":12,"p":18,"2":24,"3":36,"4":48}
@@ -49,3 +54,5 @@ def interpret_melody(melody,SMS_norm,name):
 
 print interpret_melody(melody1,SMS_NTSC,"brahms1")
 print interpret_melody(melody2,SMS_NTSC,"brahms2")
+
+

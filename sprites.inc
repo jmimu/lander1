@@ -7,7 +7,7 @@ SetLastSprite:
   ld a, $7f
   out ($bf), a
   
-  ld a, $C0 ;set $C0 to the y of sprite e+1 = e is the last sprite to print
+  ld a, $D0 ;set $D0 to the y of sprite e+1 = e is the last sprite to print
   out ($be), a
 ret
 ;--------------------------------------------------------------------
@@ -18,7 +18,7 @@ HideSprites:
   ld a, $7f
   out ($bf), a
 -:
-  ld a, $C0 ;set $C0 to the y of sprite e+1 = e is the last sprite to print
+  ld a, $D0 ;set $D0 to the y of sprite e+1 = e is the last sprite to print
   out ($be), a
   dec c
   jr nz,-
