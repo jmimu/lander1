@@ -98,7 +98,7 @@ music2_current_tone         dw ;value (for debug)
 ;==============================================================
 ; SDSC tag and SMS rom header
 ;==============================================================
-.sdsctag 1.2,"Lander v1.0","Simple lander game","jmimu"
+.sdsctag 1.2,"Lander1 v1.4","Simple lander game","jmimu"
 
 .bank 0 slot 0
 .org $0000
@@ -222,17 +222,6 @@ main:
         or c
         jp nz,-
 
-    ; Turn screen on
-    ld a,%11100000
-;          |||| |`- Zoomed sprites -> 16x16 pixels
-;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
-;          |||`---- 30 row/240 line mode
-;          ||`----- 28 row/224 line mode
-;          |`------ VBlank interrupts
-;          `------- Enable display
-    out ($bf),a
-    ld a,$81
-    out ($bf),a
     
     ;==============================================================
     ; Write tilemap data
@@ -254,6 +243,19 @@ main:
         ld a,b
         or c
         jr nz,-  
+
+    ; Turn screen on
+    ld a,%11100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Enable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+
 
     ei;enable interruption (for vblank)
 TitleLoop:
@@ -500,7 +502,21 @@ game_start:
     
     call WaitForButton
 
-    
+
+
+    ;disable interrupts and turn off screen before writing to it. Will it fix tiles issues?
+    di  ; disable interrupts
+    ; Turn screen off
+    ld a,%10100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Disable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a    
     
     ;load tilemap of current level
     ld hl,Tilemap1Start
@@ -536,6 +552,19 @@ game_start:
 
 
     
+    ; Turn screen on
+    ld a,%11100000
+;          |||| |`- Zoomed sprites -> 16x16 pixels
+;          |||| `-- Doubled sprites -> 2 tiles per sprite, 8x16
+;          |||`---- 30 row/240 line mode
+;          ||`----- 28 row/224 line mode
+;          |`------ VBlank interrupts
+;          `------- Enable display
+    out ($bf),a
+    ld a,$81
+    out ($bf),a
+
+    ei  ; enable interrupts    
     
     ;variables initialization
     ld hl,$0
